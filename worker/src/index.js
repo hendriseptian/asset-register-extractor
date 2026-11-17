@@ -95,7 +95,7 @@ export default {
           base64: btoa(binary),
           prompt: buildExtractionPrompt(parseMapping(form.get('mapping')))
         });
-        return json(request, { ok: true, records: normalizeRecords(result.records), provider: 'gemini', model });
+        return json(request, { ok: true, records: normalizeRecords(result.records), provider: 'gemini', model: result._model_used || model });
       }
 
       const body = await request.json();
