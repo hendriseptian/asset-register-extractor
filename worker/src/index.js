@@ -8,7 +8,7 @@ const ALLOWED_ORIGINS = new Set([
 ]);
 const MAX_DOCUMENT_BYTES = 10 * 1024 * 1024;
 const MAX_TABLE_BYTES = 90 * 1024;
-const MODEL_DEFAULT = 'gemini-2.5-flash-lite';
+const MODEL_DEFAULT = 'gemini-3.5-flash-lite';
 
 function cors(request) {
   const origin = request.headers.get('Origin') || '';
