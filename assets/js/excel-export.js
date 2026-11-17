@@ -60,7 +60,7 @@ document.addEventListener('DOMContentLoaded', () => {
       const anchor = document.createElement('a');
       const date = new Date().toISOString().slice(0, 10).replace(/-/g, '');
       anchor.href = objectUrl;
-      anchor.download = `DTP_PSV_PV_Asset_Register_${date}.xlsx`;
+      anchor.download = `DTP_PSV_Asset_Register_${date}.xlsx`;
       document.body.appendChild(anchor);
       anchor.click();
       anchor.remove();
