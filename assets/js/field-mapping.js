@@ -1,0 +1,7 @@
+document.addEventListener('DOMContentLoaded',()=>{
+ const fields=['tag_number','equipment_name','equipment_type','manufacturer','model_number','serial_number','year_built','design_pressure','design_temperature','operating_pressure','operating_temperature','material','capacity','location'];
+ const aliases={tag_number:'Tag Number',equipment_name:'Equipment Name',equipment_type:'Equipment Type',manufacturer:'Manufacturer',model_number:'Model Number',serial_number:'Serial Number',year_built:'Year Built',design_pressure:'Design Pressure',design_temperature:'Design Temperature',operating_pressure:'Operating Pressure',operating_temperature:'Operating Temperature',material:'Material',capacity:'Capacity',location:'Location'};
+ const saved=JSON.parse(localStorage.getItem('are_mapping')||'{}'),host=document.getElementById('mapping-table');
+ host.innerHTML=`<table><thead><tr><th>Standard field</th><th>Client column / alias</th></tr></thead><tbody>${fields.map(f=>`<tr><td>${aliases[f]}</td><td><input data-field="${f}" value="${ARE.escape(saved[f]||aliases[f])}"></td></tr>`).join('')}</tbody></table>`;
+ document.getElementById('save-mapping').addEventListener('click',()=>{const m={};host.querySelectorAll('input').forEach(i=>m[i.dataset.field]=i.value.trim());localStorage.setItem('are_mapping',JSON.stringify(m));ARE.notify(document.getElementById('mapping-status'),'Mapping profile saved in this browser.','success')});
+});
