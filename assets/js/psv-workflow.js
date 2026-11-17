@@ -12,6 +12,31 @@
   };
   const getRecords = () => readJson('are_records', []);
   const saveRecords = (records) => sessionStorage.setItem('are_records', JSON.stringify(records));
+
+  // Gemini can occasionally return a continuation row with no Tag PSV (for example,
+  // a date on the next row). Fold sparse continuation rows into the preceding tagged asset.
+  function consolidateContinuationRows(input) {
+    const fields = schema.fields.filter((field) => !field.auto);
+    const output = [];
+    let merged = 0;
+    input.forEach((record) => {
+      const tag = String(record.tag_psv || '').trim();
+      if (tag) { output.push({ ...record }); return; }
+      const populated = fields.filter((field) =>
+        record[field.key] != null && String(record[field.key]).trim() !== '');
+      const previous = output.length ? output[output.length - 1] : null;
+      if (previous && String(previous.tag_psv || '').trim() && populated.length <= 2) {
+        populated.forEach((field) => {
+          const current = previous[field.key];
+          if (current == null || String(current).trim() === '') previous[field.key] = record[field.key];
+        });
+        merged++;
+      } else {
+        output.push({ ...record });
+      }
+    });
+    return { records: output, merged };
+  }
   const getFiles = () => readJson('are_files', []);
   const getAliases = () => {
     try { return JSON.parse(localStorage.getItem('are_mapping') || '{}'); }
@@ -198,7 +223,9 @@
 
   // Review all 55 AI-mapped fields, source references and confidence before export.
   if ($('review-table')) {
-    const records = getRecords();
+    const normalized = consolidateContinuationRows(getRecords());
+    const records = normalized.records;
+    if (normalized.merged) saveRecords(records);
     const host = $('review-table');
     const summary = $('review-summary');
     const status = $('review-status');
@@ -236,5 +263,13 @@
       });
     }
     renderSummary();
+
+    const clearButton = $('clear-review-btn');
+    clearButton?.addEventListener('click', () => {
+      if (!window.confirm('Kosongkan seluruh hasil ekstraksi dan daftar file pada sesi ini? Field aliases dan Worker URL tidak akan dihapus.')) return;
+      sessionStorage.removeItem('are_records');
+      sessionStorage.removeItem('are_files');
+      location.reload();
+    });
   }
 })();
