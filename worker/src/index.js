@@ -60,7 +60,7 @@ export default {
         service: 'asset-register-extractor-worker',
         aiProvider: env.GEMINI_API_KEY ? 'gemini-configured' : 'not-configured',
         model: env.GEMINI_MODEL || MODEL_DEFAULT,
-        template: 'DTP PSV & PV 59-column'
+        template: 'DTP PSV 37-column A:AK'
       });
     }
 
