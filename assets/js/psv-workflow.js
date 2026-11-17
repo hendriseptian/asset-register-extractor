@@ -221,7 +221,7 @@
     });
   }
 
-  // Review all 55 AI-mapped fields, source references and confidence before export.
+  // Review all 36 AI-mapped fields, source references and confidence before export.
   if ($('review-table')) {
     const normalized = consolidateContinuationRows(getRecords());
     const records = normalized.records;
