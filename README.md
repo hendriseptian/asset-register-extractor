@@ -1,86 +1,66 @@
-# Asset Register Extractor
+# Asset Register Extractor — DTP PSV & PV
 
-Starter project for extracting equipment data from client Excel, PDF and image documents into a standardized asset register.
+A browser-based engineering data extraction workflow that reads client Excel/CSV, PDF and image documents, maps source information to the 55 AI-populated fields in the DTP PSV & PV workbook, supports manual review, and exports into the original Excel template.
 
 ## Architecture
 
-- Frontend: GitHub Pages (static HTML/CSS/JavaScript)
-- Backend: Cloudflare Workers
-- AI: Google Gemini API (server-side secret)
-- Excel import: SheetJS
-- Excel export: ExcelJS
-- PDF/image understanding: Gemini multimodal input
+- **Frontend:** GitHub Pages (static HTML, CSS and JavaScript)
+- **Backend:** Cloudflare Worker (`worker/src/index.js`)
+- **AI:** Google Gemini API called only from the Worker; the API key is stored as a Cloudflare Worker secret
+- **Spreadsheet parsing:** SheetJS in the browser
+- **Excel export:** ExcelJS in the browser, loading the original template workbook
+- **Session data:** browser `sessionStorage`; custom field aliases and Worker URL use `localStorage`
 
-## Important security notes
+## Target workbook
 
-- Never put Gemini/Groq API keys in frontend JavaScript or commit them to GitHub.
-- Use dummy or approved non-confidential documents while testing free AI services.
-- The Worker CORS setting is permissive for initial testing. Restrict it to your exact GitHub Pages origin before production.
-- The 10 MB upload limit is a starter safeguard, not a guarantee that all large PDFs will fit model limits.
-- All AI-extracted values must be reviewed against source documents.
+The original workbook is `assets/templates/asset-register-template.xlsx` (the DTP PSV & PV client template).
 
-## 1. Publish frontend with GitHub Pages
+- Worksheet: `Sheet1`
+- Physical columns: A:BG (59 columns)
+- Header: rows 1–4, including the original merged headings
+- Row 5: intentionally preserved blank spacer
+- First asset record: row 6
+- Column A (`No.`): generated sequentially
+- Column AI: existing formula `=AJ6/AG6*100%` is preserved
+- Columns AO and AQ: intentionally blank spacer columns
+- Remaining 55 fields: mapped by Gemini and editable in Data Review
 
-1. Push the repository contents to GitHub.
-2. Open **Settings → Pages**.
-3. Select **Deploy from a branch**.
-4. Choose `main` and `/ (root)`, then Save.
-5. Wait for the published Pages URL.
+The exporter loads the actual `.xlsx` template and writes data rows into it. It does not recreate the workbook, so the original merged header cells, column widths, header text, and formula remain in place.
 
-## 2. Deploy Cloudflare Worker
+## Workflow
 
-Install Node.js, then from the `worker` directory run:
+1. Open the site and save the Cloudflare Worker URL under **Settings / Worker URL**.
+2. Upload client `.xlsx`, `.xls`, `.csv`, `.pdf`, `.png`, `.jpg`, `.jpeg`, or `.webp` files.
+3. Spreadsheet files are read in the browser. Source rows are sent to Gemini in small batches; PDFs/images are sent to Gemini as document content.
+4. Gemini returns records using the canonical DTP PSV field keys. Unknown values are `null`; the model is instructed not to guess or silently convert units.
+5. Use **Field Mapping** to add optional client-specific alias hints.
+6. Use **Data Review** to edit all extracted values, inspect confidence and source file/location, and correct missing or duplicate tags.
+7. Click **Export DTP Excel** to download a copy of the original template populated from row 6.
 
-```bash
-npm install -g wrangler
-npx wrangler login
-npx wrangler deploy
-```
+## Cloudflare Worker configuration
 
-Set the Gemini API key as a Cloudflare secret:
+Set these under Worker → Settings → Variables and Secrets:
 
-```bash
-npx wrangler secret put GEMINI_API_KEY
-```
+- `GEMINI_API_KEY` — **Secret**, never expose this in frontend code
+- `GEMINI_MODEL` — optional variable; defaults to `gemini-2.5-flash-lite`
 
-Paste the key when prompted. Do not put it in `wrangler.toml`.
+The Worker exposes:
 
-The deployed Worker URL will look like:
+- `GET /api/health`
+- `POST /api/extract/document` (multipart form: `file`, optional `mapping` JSON)
+- `POST /api/extract/table` (JSON: `file_name`, `sheet_name`, `headers`, `rows`, optional `mapping`)
 
-`https://asset-register-extractor-api.<your-subdomain>.workers.dev`
+Supported document MIME types: PDF, PNG, JPEG, WEBP. Document uploads are limited to 10 MB. Spreadsheet requests are batched to 15 rows and capped at 20 rows / 100 columns / 90 KB per Worker request.
 
-Open the website's `index.html`, enter that Worker URL and continue.
+## GitHub Pages deployment
 
-## 3. Test the backend
+`.github/workflows/static.yml` publishes only the frontend pages and `assets/` into `_site`. The `worker/` source is not published to GitHub Pages. Cloudflare deploys the Worker separately from the `worker/` directory.
 
-Open:
+## Important engineering controls
 
-`https://YOUR-WORKER-URL/api/health`
-
-Expected response:
-
-```json
-{"ok":true,"service":"asset-register-extractor-worker","aiProvider":"gemini-configured"}
-```
-
-## 4. Current starter capabilities
-
-- Excel/CSV upload and basic header alias matching in browser
-- PDF and image upload to Worker for Gemini extraction
-- Editable review table
-- Excel export using the included starter template
-- Browser-local mapping settings and session data
-
-## 5. Current limitations / next development tasks
-
-- The current Excel reader handles simple tabular sheets; complex multi-row headers and merged cells need enhancement.
-- `.xls` compatibility depends on the SheetJS browser build.
-- The initial export writes standardized columns into the template worksheet; adapt the exporter to the client's actual DTP template before project use.
-- Groq fallback is intentionally a placeholder until a model with suitable vision support and confirmed free-tier access is selected.
-- Authentication, user roles, durable project history, advanced OCR and robust multi-page PDF chunking are not implemented yet.
-- CORS is currently open for initial testing; restrict it before production.
-- Gemini model availability and free-tier quotas can change. Check Google AI Studio pricing and limits.
-
-## Disclaimer
-
-This is a development starter, not a validated engineering records system. Verify all extracted information manually before issuing an asset register.
+- Treat AI extraction as a draft, not an approved engineering record.
+- Review every extracted value against its source document before issuing the register.
+- Empty fields mean the value was not identified in the source; do not interpret them as zero or not applicable.
+- No unit conversion or calculation is performed automatically unless the value is explicitly present in the source.
+- Do not upload confidential client documents unless your organization authorizes processing by the configured external AI service.
+- Current data storage is browser-session based; records are not synchronized to a database and may be lost when the session is cleared.

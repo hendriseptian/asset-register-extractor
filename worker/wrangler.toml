@@ -1,12 +1,9 @@
-name = "asset-register-extractor-api"
+name = "asset-register-extractor"
 main = "src/index.js"
 compatibility_date = "2026-11-17"
 
 [vars]
 GEMINI_MODEL = "gemini-2.5-flash-lite"
 
-# Configure secrets with:
+# Keep GEMINI_API_KEY as a Cloudflare Worker secret:
 # npx wrangler secret put GEMINI_API_KEY
-#
-# Before production, replace Access-Control-Allow-Origin: * in src/index.js
-# with your exact GitHub Pages origin.

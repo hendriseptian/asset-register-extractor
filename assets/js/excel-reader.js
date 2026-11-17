@@ -1,8 +1,44 @@
-// Reads client workbooks in the browser. SheetJS is loaded from CDN on extraction.html.
-(function(){const aliases={tag_number:['tag number','equipment tag','equipment no','equipment number','tag no','tag no.','tag'],equipment_name:['equipment name','description','item description'],equipment_type:['equipment type','type'],manufacturer:['manufacturer','vendor','vendor name','mfg','oem'],model_number:['model','model no','model number'],serial_number:['serial number','serial no','serial no.','s/n','sn'],year_built:['year built','mfg year','manufacturing year','year of manufacture','date of manufacture'],design_pressure:['design pressure'],design_temperature:['design temperature'],operating_pressure:['operating pressure'],operating_temperature:['operating temperature'],material:['material','material of construction','moc'],capacity:['capacity'],location:['location','area','plant location']};
- const norm=s=>String(s??'').toLowerCase().replace(/[._-]/g,' ').replace(/\s+/g,' ').trim();
- window.AREExcel={async read(file){const data=await file.arrayBuffer();const wb=XLSX.read(data,{type:'array',cellDates:false});let out=[];
-  wb.SheetNames.forEach(name=>{const ws=wb.Sheets[name],rows=XLSX.utils.sheet_to_json(ws,{header:1,defval:''});let headerIndex=rows.findIndex(r=>r.filter(x=>String(x).trim()).length>=2);if(headerIndex<0)return;const headers=rows[headerIndex].map(norm);const map={};headers.forEach((h,i)=>{for(const [field,names] of Object.entries(aliases)){if(names.map(norm).includes(h)&&map[field]===undefined)map[field]=i}});
-   rows.slice(headerIndex+1).forEach((row,ri)=>{if(!row.some(v=>String(v).trim()))return;const obj={};Object.entries(map).forEach(([field,i])=>obj[field]=row[i]===undefined?'':String(row[i]).trim());if(Object.values(obj).some(v=>v!=='')){obj._source_location=`${name} · row ${headerIndex+ri+2}`;out.push(obj)}});
-  });return out;
- }};})();
+// Read client spreadsheets into source tables. Gemini performs semantic mapping to the DTP PSV template.
+(function(){
+  const clean=v=>v===null||v===undefined?'':String(v).trim();
+  function headerRowIndex(rows){
+    let best=0,bestScore=-1;
+    rows.slice(0,15).forEach((row,i)=>{
+      const values=row.map(clean).filter(Boolean);
+      const textCount=values.filter(v=>/[A-Za-z]/.test(v)).length;
+      const score=textCount*2+values.length;
+      if(score>bestScore){bestScore=score;best=i;}
+    });
+    return best;
+  }
+  function makeHeaders(rows,headerIndex){
+    const start=Math.max(0,headerIndex-2);
+    return (rows[headerIndex]||[]).map((_,col)=>{
+      const parts=[];
+      for(let r=start;r<=headerIndex;r++){
+        const value=clean(rows[r]?.[col]);
+        if(value&&!parts.includes(value))parts.push(value);
+      }
+      return parts.join(' / ')||`Column ${col+1}`;
+    });
+  }
+  window.AREExcel={async read(file){
+    const buffer=await file.arrayBuffer();
+    const workbook=XLSX.read(buffer,{type:'array',cellDates:false,raw:false});
+    const sheets=[];
+    workbook.SheetNames.forEach(name=>{
+      const ws=workbook.Sheets[name];
+      const rows=XLSX.utils.sheet_to_json(ws,{header:1,defval:'',raw:false,blankrows:false});
+      if(!rows.length)return;
+      const headerIndex=headerRowIndex(rows);
+      const headers=makeHeaders(rows,headerIndex);
+      const dataRows=[];
+      for(let i=headerIndex+1;i<rows.length;i++){
+        const values=headers.map((_,col)=>clean(rows[i]?.[col]));
+        if(values.some(Boolean))dataRows.push({rowNumber:i+1,values});
+      }
+      if(dataRows.length)sheets.push({name,headers,rows:dataRows,headerRow:headerIndex+1});
+    });
+    return sheets;
+  }};
+})();
