@@ -118,7 +118,7 @@ export default {
           mapping: parseMapping(JSON.stringify(body.mapping || {}))
         })
       });
-      return json(request, { ok: true, records: normalizeRecords(result.records), provider: 'gemini', model });
+      return json(request, { ok: true, records: normalizeRecords(result.records), provider: 'gemini', model: result._model_used || model });
     } catch (error) {
       return json(request, { error: error?.message || 'Extraction failed.' }, 502);
     }
