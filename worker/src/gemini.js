@@ -4,7 +4,7 @@ const RETRYABLE_STATUS = new Set([429, 500, 502, 503, 504]);
 const wait = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 
 async function requestGemini({apiKey, model, parts}) {
-  const endpoint = \`https://generativelanguage.googleapis.com/v1beta/models/\${encodeURIComponent(model)}:generateContent?key=\${encodeURIComponent(apiKey)}\`;
+  const endpoint = `https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(model)}:generateContent?key=${encodeURIComponent(apiKey)}`;
   const response = await fetch(endpoint, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
@@ -19,14 +19,14 @@ async function requestGemini({apiKey, model, parts}) {
   try { body = JSON.parse(raw); } catch { body = {}; }
 
   if (!response.ok) {
-    const error = new Error(body.error?.message || \`Gemini request failed (\${response.status}).\`);
+    const error = new Error(body.error?.message || `Gemini request failed (${response.status}).`);
     error.status = response.status;
     throw error;
   }
 
   const output = body.candidates?.[0]?.content?.parts?.map((part) => part.text || '').join('') || '';
   if (!output) throw new Error(body.promptFeedback?.blockReason
-    ? \`Gemini blocked the request: \${body.promptFeedback.blockReason}\`
+    ? `Gemini blocked the request: ${body.promptFeedback.blockReason}`
     : 'Gemini returned an empty response.');
 
   let parsed;
@@ -61,7 +61,7 @@ async function callGemini({apiKey, model, parts}) {
     }
   }
 
-  throw new Error(\`Gemini primary and fallback models are temporarily unavailable. Last error: \${lastError?.message || 'Unknown Gemini error'}\`);
+  throw new Error(`Gemini primary and fallback models are temporarily unavailable. Last error: ${lastError?.message || 'Unknown Gemini error'}`);
 }
 
 export async function extractWithGemini({apiKey, model, mimeType, base64, prompt}) {
