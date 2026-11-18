@@ -38,6 +38,7 @@ jobs:
           cp index.html _site/
           cp dashboard.html _site/
           cp extraction.html _site/
+          cp multi-document.html _site/
           cp mapping.html _site/
           cp review.html _site/
           cp -r assets _site/
