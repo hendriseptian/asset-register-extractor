@@ -1,6 +1,6 @@
 # Asset Register Extractor — DTP PSV & PV
 
-A browser-based engineering data extraction workflow that reads client Excel/CSV, PDF and image documents, maps source information to the 38 AI-populated fields in the DTP PSV & PV workbook, supports manual review, and exports into the original Excel template.
+A browser-based engineering data extraction workflow that reads client Excel/CSV, PDF and image documents, maps source information to the 39 AI-populated fields in the DTP PSV & PV workbook, supports manual review, and exports into the original Excel template.
 
 ## Architecture
 
@@ -16,15 +16,15 @@ A browser-based engineering data extraction workflow that reads client Excel/CSV
 The current workbook is `assets/templates/asset-register-template.xlsx` (latest user-provided DTP PSV & PV template).
 
 - Worksheet: `Sheet1`
-- Physical columns: A:AM (39 columns)
+- Physical columns: A:AN (40 columns)
 - Header: rows 1–4, including the original merged headings
 - First asset record: row 5
 - Column A (`No.`): generated sequentially
-- Columns AC:AD: protected equipment type and item number
-- Columns AE:AF: protected equipment design and operating temperature
-- Columns AG:AH: protected equipment design and operating pressure
-- Columns AI:AK: orifice area
-- Columns AL:AM: capacity
+- Columns AC:AE: protected equipment type, item number, and fluid
+- Columns AF:AG: protected equipment design and operating temperature
+- Columns AH:AI: protected equipment design and operating pressure
+- Columns AJ:AL: orifice area
+- Columns AM:AN: capacity
 
 The exporter loads the actual `.xlsx` template and writes data rows into it. It does not recreate the workbook, so the original merged header cells, column widths, header text, and formatting remain in place.
 
