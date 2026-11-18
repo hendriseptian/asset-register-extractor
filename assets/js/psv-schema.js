@@ -1,6 +1,6 @@
-/* DTP PSV Asset Register map: based on DTP_PSV_Asset_Register(2).xlsx (37 columns A:AK). */
-(()=> {
-const rows=[
+/* DTP PSV Asset Register map: latest 39-column A:AM workbook. */
+(() => {
+const rows = [
 'A|1|record_no|No.|Identification|1|',
 'B|2|tag_psv|Tag PSV|Identification||PSV tag;tag number;equipment tag;tag no;equipment number;tag id;safety valve tag',
 'C|3|owner_operator|Owner / Operator|Identification||owner;operator;owner operator;company;client',
@@ -29,16 +29,29 @@ const rows=[
 'Z|26|pop_test|Pop Test|Previous Inspection||pop test;pop pressure;pop test result',
 'AA|27|leak_test|Leak Test|Previous Inspection||leak test;leakage test;seat leakage test',
 'AB|28|overpressure_scenario_previous|Overpressure Scenario|Previous Inspection||previous overpressure scenario;overpressure scenario;relieving scenario;contingency;overpressure case',
-'AC|29|design_temperature_c|Design (°C)|Temperature||design temperature C;design temperature Celsius;design temp C',
-'AD|30|operating_temperature_c|Operating (°C)|Temperature||operating temperature C;operating temperature Celsius;operating temp C',
-'AE|31|design_temperature_f|Design (°F)|Temperature||design temperature F;design temperature Fahrenheit;design temp F',
-'AF|32|operating_temperature_f|Operating (°F)|Temperature||operating temperature F;operating temperature Fahrenheit;operating temp F',
-'AG|33|orifice_area_calculated|Calculated|Orifice Area||calculated orifice area;calculated area;orifice area calculated',
-'AH|34|orifice_area_selected|Selected|Orifice Area||selected orifice area;selected area;orifice area selected',
-'AI|35|orifice_designation|Designation|Orifice Area||orifice designation;designation;API orifice designation',
-'AJ|36|required_capacity|Required|Capacity||required capacity;required capacity kg/hr;required flow;required rate',
-'AK|37|rated_capacity|Rated Capacity|Capacity||rated capacity;certified capacity;rated capacity kg/hr;relieving capacity'
+'AC|29|protected_equipment_type|Type Equipment|Equipment Protected||type equipment;equipment protected;protected equipment;jenis peralatan yang dilindungi;equipment type;protected item description',
+'AD|30|protected_equipment_item_no|No Item|Equipment Protected||no item;item number;item no;equipment number;equipment tag;nomor item;nomor peralatan;tag peralatan yang dilindungi',
+'AE|31|protected_equipment_design_temperature|Design Temperature|Temperature||protected equipment design temperature;design temperature equipment protected;temperatur desain peralatan yang dilindungi;design temperature',
+'AF|32|protected_equipment_operating_temperature|Operating Temperature|Temperature||protected equipment operating temperature;operating temperature equipment protected;temperatur operasi peralatan yang dilindungi;operating temperature',
+'AG|33|protected_equipment_design_pressure|Design Pressure|Protected Equipment Pressure||protected equipment design pressure;design pressure equipment protected;tekanan desain peralatan yang dilindungi',
+'AH|34|protected_equipment_operating_pressure|Operating Pressure|Protected Equipment Pressure||protected equipment operating pressure;operating pressure equipment protected;tekanan operasi peralatan yang dilindungi',
+'AI|35|orifice_area_calculated|Calculated|Orifice Area||calculated orifice area;calculated area;orifice area calculated',
+'AJ|36|orifice_area_selected|Selected|Orifice Area||selected orifice area;selected area;orifice area selected',
+'AK|37|orifice_designation|Designation|Orifice Area||orifice designation;designation;API orifice designation',
+'AL|38|required_capacity|Required|Capacity||required capacity;required capacity kg/hr;required flow;required rate',
+'AM|39|rated_capacity|Rated Capacity|Capacity||rated capacity;certified capacity;rated capacity kg/hr;relieving capacity'
 ];
-const fields=rows.map(line=>{const [column,index,key,label,group,auto,aliases]=line.split('|');return{column,index:Number(index),key,label,group,auto:auto==='1',aliases:aliases?aliases.split(';'):[]}});
-window.ARE_PSV_SCHEMA={templateFile:'assets/templates/asset-register-template.xlsx',worksheet:'Sheet1',firstDataRow:5,totalTemplateColumns:37,expectedMergedRanges:18,fields};
+const fields = rows.map(line => {
+  const [column,index,key,label,group,auto,aliases] = line.split('|');
+  return {column,index:Number(index),key,label,group,auto:auto==='1',aliases:aliases?aliases.split(';'):[]};
+});
+window.ARE_PSV_SCHEMA = {
+  templateFile:'assets/templates/asset-register-template.xlsx',
+  worksheet:'Sheet1',
+  firstDataRow:6,
+  totalTemplateColumns:39,
+  expectedMergedRanges:19,
+  expectedHeaderRows:4,
+  fields
+};
 })();
