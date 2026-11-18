@@ -1,4 +1,4 @@
-/* DTP PSV Asset Register map: latest 39-column A:AM workbook. */
+/* DTP PSV Asset Register map: latest 40-column A:AN workbook. */
 (() => {
 const rows = [
 'A|1|record_no|No.|Identification|1|',
@@ -31,15 +31,16 @@ const rows = [
 'AB|28|overpressure_scenario_previous|Overpressure Scenario|Previous Inspection||previous overpressure scenario;overpressure scenario;relieving scenario;contingency;overpressure case',
 'AC|29|protected_equipment_type|Type Equipment|Equipment Protected||type equipment;equipment protected;protected equipment;jenis peralatan yang dilindungi;equipment type;protected item description',
 'AD|30|protected_equipment_item_no|No Item|Equipment Protected||no item;item number;item no;equipment number;equipment tag;nomor item;nomor peralatan;tag peralatan yang dilindungi',
-'AE|31|protected_equipment_design_temperature|Design Temperature|Temperature||protected equipment design temperature;design temperature equipment protected;temperatur desain peralatan yang dilindungi;design temperature',
-'AF|32|protected_equipment_operating_temperature|Operating Temperature|Temperature||protected equipment operating temperature;operating temperature equipment protected;temperatur operasi peralatan yang dilindungi;operating temperature',
-'AG|33|protected_equipment_design_pressure|Design Pressure|Protected Equipment Pressure||protected equipment design pressure;design pressure equipment protected;tekanan desain peralatan yang dilindungi',
-'AH|34|protected_equipment_operating_pressure|Operating Pressure|Protected Equipment Pressure||protected equipment operating pressure;operating pressure equipment protected;tekanan operasi peralatan yang dilindungi',
-'AI|35|orifice_area_calculated|Calculated|Orifice Area||calculated orifice area;calculated area;orifice area calculated',
-'AJ|36|orifice_area_selected|Selected|Orifice Area||selected orifice area;selected area;orifice area selected',
-'AK|37|orifice_designation|Designation|Orifice Area||orifice designation;designation;API orifice designation',
-'AL|38|required_capacity|Required|Capacity||required capacity;required capacity kg/hr;required flow;required rate',
-'AM|39|rated_capacity|Rated Capacity|Capacity||rated capacity;certified capacity;rated capacity kg/hr;relieving capacity'
+'AE|31|protected_equipment_fluid|Fluid|Equipment Protected||fluid;process fluid;protected equipment fluid;fluida;jenis fluida;fluida peralatan yang dilindungi',
+'AF|32|protected_equipment_design_temperature|Design Temperature|Temperature||protected equipment design temperature;design temperature equipment protected;temperatur desain peralatan yang dilindungi;design temperature',
+'AG|33|protected_equipment_operating_temperature|Operating Temperature|Temperature||protected equipment operating temperature;operating temperature equipment protected;temperatur operasi peralatan yang dilindungi;operating temperature',
+'AH|34|protected_equipment_design_pressure|Design Pressure|Protected Equipment Pressure||protected equipment design pressure;design pressure equipment protected;tekanan desain peralatan yang dilindungi',
+'AI|35|protected_equipment_operating_pressure|Operating Pressure|Protected Equipment Pressure||protected equipment operating pressure;operating pressure equipment protected;tekanan operasi peralatan yang dilindungi',
+'AJ|36|orifice_area_calculated|Calculated|Orifice Area||calculated orifice area;calculated area;orifice area calculated',
+'AK|37|orifice_area_selected|Selected|Orifice Area||selected orifice area;selected area;orifice area selected',
+'AL|38|orifice_designation|Designation|Orifice Area||orifice designation;designation;API orifice designation',
+'AM|39|required_capacity|Required|Capacity||required capacity;required capacity kg/hr;required flow;required rate',
+'AN|40|rated_capacity|Rated Capacity|Capacity||rated capacity;certified capacity;rated capacity kg/hr;relieving capacity'
 ];
 const fields = rows.map(line => {
   const [column,index,key,label,group,auto,aliases] = line.split('|');
@@ -49,8 +50,8 @@ window.ARE_PSV_SCHEMA = {
   templateFile:'assets/templates/asset-register-template.xlsx',
   worksheet:'Sheet1',
   firstDataRow:5,
-  totalTemplateColumns:39,
-  expectedMergedRanges:19,
+  totalTemplateColumns:40,
+  expectedMergedRanges:null,
   expectedHeaderRows:4,
   fields
 };
