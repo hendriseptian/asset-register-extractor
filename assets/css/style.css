@@ -89,3 +89,18 @@ input:focus,select:focus{outline:3px solid #1769aa20;border-color:#3987bd}
 .sidebar nav a[href="multi-document.html"]{order:3}
 .sidebar nav a[href="mapping.html"]{order:4}
 .sidebar nav a[href="review.html"]{order:5}
+
+
+/* Keep Worker URL settings visible on every workspace page */
+.sidebar-bottom{
+ margin-top:22px !important;
+ padding:12px 0 0;
+ border-top:1px solid rgba(255,255,255,.16);
+ display:block;
+ flex-shrink:0;
+}
+.sidebar-bottom a{display:block;font-size:12px}
+@media(max-width:760px){
+ .sidebar-bottom{display:block !important;margin-top:12px !important;padding-top:8px}
+ .sidebar-bottom a{font-size:10px;padding:8px 6px;white-space:normal}
+}
