@@ -234,10 +234,10 @@
       const duplicateCount = tags.filter((tag, index) => tags.indexOf(tag) !== index).length;
       const missingTagCount = records.filter((record) => !String(record.tag_psv || '').trim()).length;
       const lowConfidenceCount = records.filter((record) => Number(record._confidence ?? 0.5) < 0.7).length;
-      const emptyCount = records.reduce((total, record) => total + dataFields.filter((field) => record[field.key] == null || String(record[field.key]).trim() === '').length, 0);
+      const emptyCount = records.reduce((total, record) => total + dataFields.filter((field) => record[field.key] == null || String(record[field.key]).trim() === '').length, 0);\n      const conflictCount = records.reduce((total, record) => total + (Array.isArray(record._merge_conflicts) ? record._merge_conflicts.length : 0), 0);
       summary.innerHTML = [
         `${records.length} records`, `${missingTagCount} missing Tag PSV`, `${duplicateCount} duplicate tag(s)`,
-        `${lowConfidenceCount} low-confidence`, `${emptyCount} empty fields`
+        `${lowConfidenceCount} low-confidence`, `${emptyCount} empty fields`, `${conflictCount} merge conflict(s)`
       ].map((label) => `<span class="summary-chip">${escapeHtml(label)}</span>`).join('');
     };
 
@@ -254,10 +254,10 @@
       });
       const groupHeaders = grouped.map((group) =>
         `<th class="group-header" colspan="${group.fields.length}">${escapeHtml(group.group)}</th>`
-      ).join('') + '<th class="group-header review-meta-group" colspan="3">Review Metadata</th>';
+      ).join('') + '<th class="group-header review-meta-group" colspan="4">Review Metadata</th>';
       const fieldHeaders = visibleFields.map((field) =>
         `<th class="field-header" title="Template column ${field.column}">${field.column} · ${escapeHtml(field.label)}</th>`
-      ).join('') + '<th class="field-header">AI Confidence</th><th class="field-header">Source File</th><th class="field-header">Source Location</th>';
+      ).join('') + '<th class="field-header">AI Confidence</th><th class="field-header">Source File</th><th class="field-header">Source Location</th><th class="field-header">Merge Conflicts</th>';
       const rows = records.map((record, rowIndex) => {
         const needsReview = Number(record._confidence ?? 0.5) < 0.7 || !String(record.tag_psv || '').trim();
         const cells = visibleFields.map((field) => {
@@ -265,7 +265,7 @@
           return `<td><input data-row="${rowIndex}" data-field="${field.key}" value="${escapeHtml(record[field.key] ?? '')}" title="${escapeHtml(field.label)} · ${field.column}"></td>`;
         }).join('');
         return `<tr class="${needsReview ? 'needs-review' : ''}">${cells}
-          <td>${Math.round(Number(record._confidence ?? 0.5) * 100)}%</td><td>${escapeHtml(record._source_file || '')}</td><td>${escapeHtml(record._source_location || '')}</td></tr>`;
+          <td>${Math.round(Number(record._confidence ?? 0.5) * 100)}%</td><td>${escapeHtml(record._source_file || '')}</td><td>${escapeHtml(record._source_location || '')}</td><td>${(record._merge_conflicts || []).map((conflict) => escapeHtml(conflict.field + ': kept [' + conflict.kept_value + '] vs [' + conflict.other_value + '] from ' + conflict.source_file)).join('<br>') || '—'}</td></tr>`;
       }).join('');
       host.innerHTML = `<div class="review-help">Edit values directly before export. Preview follows the Excel template's grouped headers and column order (A:AM). Scroll horizontally to inspect all 39 template columns. AI confidence and source references are review metadata, not Excel columns.</div>
         <table class="review-table"><thead><tr class="group-header-row">${groupHeaders}</tr><tr class="field-header-row">${fieldHeaders}</tr></thead><tbody>${rows}</tbody></table>`;
