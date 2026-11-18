@@ -38,6 +38,15 @@
     return { records: output, merged };
   }
   const getFiles = () => readJson('are_files', []);
+  async function hashFile(file) {
+    if (!globalThis.crypto?.subtle) throw new Error('Browser tidak mendukung pemeriksaan duplikasi file. Gunakan HTTPS atau browser terbaru.');
+    const bytes = await file.arrayBuffer();
+    const digest = await crypto.subtle.digest('SHA-256', bytes);
+    return Array.from(new Uint8Array(digest), (byte) => byte.toString(16).padStart(2, '0')).join('');
+  }
+  function processedFileHashes() {
+    return new Set(getFiles().map((entry) => entry.hash).filter(Boolean));
+  }
   const getAliases = () => {
     try { return JSON.parse(localStorage.getItem('are_mapping') || '{}'); }
     catch { return {}; }
@@ -171,23 +180,41 @@
       const metadata = [];
       try {
         const workerUrl = getWorkerUrl();
-        for (let index = 0; index < selectedFiles.length; index++) {
-          const file = selectedFiles[index];
+        const knownHashes = processedFileHashes();
+        const seenHashes = new Set();
+        const freshFiles = [];
+        const skippedDuplicates = [];
+        for (const file of selectedFiles) {
+          const hash = await hashFile(file);
+          if (knownHashes.has(hash) || seenHashes.has(hash)) {
+            skippedDuplicates.push(file.name);
+            continue;
+          }
+          seenHashes.add(hash);
+          freshFiles.push({ file, hash });
+        }
+        if (!freshFiles.length) {
+          showNotice(status, `Tidak ada ekstraksi baru. ${skippedDuplicates.length} file sudah pernah diproses. Preview lama tetap dipertahankan dan kuota AI tidak digunakan.`, 'success');
+          return;
+        }
+        for (let index = 0; index < freshFiles.length; index++) {
+          const { file, hash } = freshFiles[index];
           const extension = file.name.split('.').pop().toLowerCase();
-          metadata.push({ name: file.name, size: file.size, type: extension });
           try {
             let records;
             if (['xlsx', 'xls', 'csv'].includes(extension)) records = await processSpreadsheet(file, workerUrl);
             else if (['pdf', 'png', 'jpg', 'jpeg', 'webp'].includes(extension)) records = await processDocument(file, workerUrl);
             else throw new Error('Format tidak didukung. Gunakan XLSX, XLS, CSV, PDF, PNG, JPG atau WEBP.');
             newRecords.push(...records);
-            showNotice(status, `Diproses ${index + 1}/${selectedFiles.length}: ${file.name} — ${records.length} record ditemukan.`);
+            metadata.push({ name: file.name, size: file.size, type: extension, hash, processed_at: new Date().toISOString() });
+            showNotice(status, `Diproses ${index + 1}/${freshFiles.length}: ${file.name} — ${records.length} record ditemukan.`);
           } catch (error) { errors.push(`${file.name}: ${error.message}`); }
         }
-        saveRecords(getRecords().concat(newRecords));
-        sessionStorage.setItem('are_files', JSON.stringify(getFiles().concat(metadata)));
-        if (errors.length) showNotice(status, `Sebagian file gagal diproses:\n${errors.join('\n')}\n${newRecords.length} record baru berhasil diekstrak.`, 'error');
-        else showNotice(status, `Selesai. ${newRecords.length} record baru berhasil diekstrak. Lanjutkan ke Field Mapping dan Data Review.`, 'success');
+        if (newRecords.length) saveRecords(getRecords().concat(newRecords));
+        if (metadata.length) sessionStorage.setItem('are_files', JSON.stringify(getFiles().concat(metadata)));
+        const skippedMessage = skippedDuplicates.length ? ` ${skippedDuplicates.length} file duplikat dilewati tanpa memakai kuota AI.` : '';
+        if (errors.length) showNotice(status, `Sebagian file gagal diproses:\n${errors.join('\n')}\n${newRecords.length} record baru berhasil diekstrak.${skippedMessage}`, 'error');
+        else showNotice(status, `Selesai. ${newRecords.length} record baru berhasil diekstrak.${skippedMessage} Preview sebelumnya tetap dipertahankan. Lanjutkan ke Data Review.`, 'success');
       } catch (error) { showNotice(status, error.message, 'error'); }
       finally { extractButton.disabled = selectedFiles.length === 0; clearButton.disabled = false; }
     });
