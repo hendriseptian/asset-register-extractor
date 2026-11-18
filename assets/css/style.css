@@ -4,3 +4,60 @@
 
 /* DTP PSV template mapping and review */
 .mapping-group{margin-top:24px}.mapping-group h3{padding:10px 12px;background:#eef4fa;border-left:4px solid var(--blue);border-radius:6px;margin-bottom:8px}.mapping-table{min-width:900px}.mapping-table td{vertical-align:middle}.mapping-table input{width:320px;min-width:260px}.alias-list{white-space:normal;min-width:260px;max-width:420px;color:#667085;line-height:1.5}.review-wrap{max-height:68vh;overflow:auto;border:1px solid var(--line);border-radius:8px}.review-table{min-width:6200px;font-size:11px}.review-table th{position:sticky;top:0;z-index:2;min-width:145px;white-space:normal;line-height:1.35}.review-table th:first-child,.review-table td:first-child{position:sticky;left:0;z-index:3;min-width:42px;background:#f7f9fb}.review-table td{padding:5px}.review-table td input{min-width:130px;width:100%;font-size:11px;padding:7px}.review-table tr.needs-review td{background:#fff8e8}.review-table tr.needs-review td:first-child{background:#fff0cf}.review-help{padding:10px 12px;background:#f5f8fc;color:#52647a;border-bottom:1px solid var(--line);font-size:12px;position:sticky;left:0}.mapping-table th{position:sticky;top:0;z-index:1}.panel-heading .status-pill{white-space:nowrap}@media(max-width:760px){.mapping-table input{width:220px;min-width:200px}.review-table{min-width:5000px}.panel-heading{align-items:flex-start;flex-direction:column}}
+
+
+/* Mechanical Integrity corporate workspace theme */
+:root{
+ --navy:#102a43;--blue:#1769aa;--ink:#172b3a;--muted:#607487;
+ --line:#d9e2ec;--bg:#f3f6f9;--white:#fff;--green:#16794b;
+ --amber:#a96b12;--red:#b42318;--steel:#eaf0f5;
+ --mi-accent:#2b7bb9;--mi-soft:#e8f2fa;
+}
+body{background:var(--bg);color:var(--ink);letter-spacing:.005em}
+h1,h2,h3{letter-spacing:-.025em}
+.app-shell{background:var(--bg)}
+.sidebar{width:258px;background:linear-gradient(180deg,#102a43 0%,#163650 100%);padding:25px 15px 18px;box-shadow:4px 0 18px #102a4310}
+.sidebar-brand{padding:0 9px 30px;gap:12px}
+.sidebar-brand b{font:700 13px Manrope,sans-serif;letter-spacing:.045em;color:#fff}
+.sidebar-brand small{font-size:11px;color:#b9cbd9;letter-spacing:.04em}
+.brand-mark{background:#e5f1fb;color:#145b91;border:1px solid #c8dff1}
+.sidebar nav{gap:5px}
+.sidebar nav a{font-size:13px;font-weight:500;padding:11px 12px;border:1px solid transparent;transition:background .15s,border-color .15s}
+.sidebar nav a.active{background:#244966;border-color:#315b7b;color:#fff;box-shadow:inset 3px 0 0 #69b5e6}
+.sidebar nav a:hover{background:#1d405d;color:#fff}
+.sidebar-bottom{border-top:1px solid #ffffff1a;padding-top:14px}
+.sidebar-bottom a{font-size:12px}
+.main-content{width:min(1320px,100%);padding:34px 42px 48px}
+.topbar{margin-bottom:24px}
+.topbar h1{font-size:27px;color:#142d42}
+.eyebrow{color:#47718f;font-size:10px;letter-spacing:1.65px}
+.panel,.stat-card{border-color:#dce4eb;border-radius:13px;box-shadow:0 4px 16px #18364d08}
+.panel{padding:25px}
+.panel h2{color:#17344d}
+.status-pill{background:#e5f4ec;color:#176b48;font-weight:600}
+.btn{border-radius:7px;min-height:38px}
+.primary{background:#1769aa}
+.primary:hover{background:#12588f}
+.secondary{background:#edf2f6;color:#344b5e}
+.drop-zone{border:1.5px dashed #9fb8ca;background:#f7fafc;border-radius:10px}
+.drop-zone.drag{border-color:#1769aa;background:#edf6fc}
+.notice{border:1px solid #d7e7f4}
+input:focus,select:focus{outline:3px solid #1769aa20;border-color:#3987bd}
+.workflow-grid{grid-template-columns:repeat(4,minmax(0,1fr))}
+.workflow-grid a{background:#fff;border-color:#dce5ed;transition:transform .15s,border-color .15s,box-shadow .15s}
+.workflow-grid a:hover{transform:translateY(-2px);border-color:#8fb9d6;box-shadow:0 5px 14px #18364d10}
+.workflow-grid b{font:700 12px Manrope,sans-serif;color:#18364e}
+.footer-note{color:#8293a2}
+.login-card{border-color:#dce4eb;box-shadow:0 14px 42px #18364d10}
+.login-card h1{color:#142d42}
+@media(max-width:1050px){.workflow-grid{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media(max-width:760px){
+ .sidebar{width:100%;min-height:auto;padding:12px;flex-direction:row;align-items:center;overflow-x:auto}
+ .sidebar-brand{padding:0 8px;min-width:180px}
+ .sidebar nav{display:flex;gap:4px}
+ .sidebar nav a{white-space:nowrap;font-size:11px;padding:9px}
+ .sidebar-bottom{display:none}
+ .main-content{padding:22px 14px}
+ .workflow-grid{grid-template-columns:1fr}
+ .app-shell{display:block}
+}
