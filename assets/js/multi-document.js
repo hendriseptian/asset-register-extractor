@@ -33,10 +33,11 @@
       const tag = normalizeTag(source.tag_psv);
       if (!tag) { output.push({...source, _merge_conflicts:[]}); continue; }
       if (!byTag.has(tag)) {
-        const record = {...source, _merge_conflicts:[], _source_files:[source._source_file].filter(Boolean)};
+        const record = {...source, _merge_conflicts:[...(source._merge_conflicts || [])], _source_files:[source._source_file].filter(Boolean)};
         byTag.set(tag,record); output.push(record); continue;
       }
       const target = byTag.get(tag);
+      if (Array.isArray(source._merge_conflicts)) target._merge_conflicts.push(...source._merge_conflicts);
       if (source._source_file && !target._source_files.includes(source._source_file)) target._source_files.push(source._source_file);
       for (const field of fields) {
         const incoming = source[field.key];
