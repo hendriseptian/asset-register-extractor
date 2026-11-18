@@ -38,6 +38,18 @@ The exporter loads the actual `.xlsx` template and writes data rows into it. It 
 6. Use **Data Review** to edit all extracted values, inspect confidence and source file/location, and correct missing or duplicate tags.
 7. Click **Export DTP Excel** to download a copy of the original template populated from row 5.
 
+## Multi-document consolidation
+
+Open **Multi-Document Upload** to submit multiple supporting documents for one or more PSV assets.
+
+- Each PDF/image or spreadsheet is extracted independently using the configured Worker.
+- Extracted records are consolidated only when their normalized Tag PSV matches.
+- Records without a Tag PSV are kept separate; they are never automatically guessed into a group.
+- Empty fields can be populated from another matching source.
+- Conflicting non-empty values are not overwritten. The first value is retained and the alternative value is displayed in the Data Review **Merge Conflicts** column.
+- Source file names and source locations are retained for traceability.
+- Review all conflicts and source documents before exporting the consolidated register.
+
 ## Cloudflare Worker configuration
 
 Set these under Worker → Settings → Variables and Secrets:
