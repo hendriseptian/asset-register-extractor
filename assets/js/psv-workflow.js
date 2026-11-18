@@ -181,7 +181,10 @@
       const metadata = [];
       try {
         const workerUrl = getWorkerUrl();
-        const knownEntries = processedFileEntries();
+        // Duplicate protection is active only while Data Review contains records.
+        // Once the review is cleared, allow the same source files to be extracted again.
+        const reviewHasData = getRecords().length > 0;
+        const knownEntries = reviewHasData ? processedFileEntries() : [];
         const knownHashes = new Set(knownEntries.map((entry) => entry.hash).filter(Boolean));
         const seenHashes = new Set();
         const freshFiles = [];
