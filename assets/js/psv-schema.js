@@ -48,7 +48,7 @@ const fields = rows.map(line => {
 window.ARE_PSV_SCHEMA = {
   templateFile:'assets/templates/asset-register-template.xlsx',
   worksheet:'Sheet1',
-  firstDataRow:6,
+  firstDataRow:5,
   totalTemplateColumns:39,
   expectedMergedRanges:19,
   expectedHeaderRows:4,
