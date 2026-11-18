@@ -18,8 +18,7 @@ The current workbook is `assets/templates/asset-register-template.xlsx` (latest 
 - Worksheet: `Sheet1`
 - Physical columns: A:AM (39 columns)
 - Header: rows 1–4, including the original merged headings
-- Row 5: blank spacer row preserved
-- First asset record: row 6
+- First asset record: row 5
 - Column A (`No.`): generated sequentially
 - Columns AC:AD: protected equipment type and item number
 - Columns AE:AF: protected equipment design and operating temperature
