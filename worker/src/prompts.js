@@ -4,7 +4,7 @@
 // File    : worker/src/prompts.js
 // Purpose : Canonical field mapping and AI extraction prompts
 // Template: DTP_PSV_Asset_Register(2).xlsx
-// Columns : A:AK (37 columns, including automatic No.)
+// Columns : A:AM (39 columns, including automatic No.)
 // ============================================================
 
 // Canonical DTP PSV register fields
