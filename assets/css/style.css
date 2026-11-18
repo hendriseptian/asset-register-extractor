@@ -104,3 +104,13 @@ input:focus,select:focus{outline:3px solid #1769aa20;border-color:#3987bd}
  .sidebar-bottom{display:block !important;margin-top:12px !important;padding-top:8px}
  .sidebar-bottom a{font-size:10px;padding:8px 6px;white-space:normal}
 }
+
+
+/* Anchor Worker URL settings at the bottom of the full-height sidebar */
+.app-shell{min-height:100vh;align-items:stretch}
+.sidebar{min-height:100vh;height:100vh;box-sizing:border-box;position:sticky;top:0}
+.sidebar-bottom{margin-top:auto !important;padding:12px 0 0;border-top:1px solid rgba(255,255,255,.16);display:block;flex-shrink:0}
+@media(max-width:760px){
+ .sidebar{height:100vh;min-height:100vh}
+ .sidebar-bottom{margin-top:auto !important;padding-top:8px}
+}
