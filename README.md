@@ -1,6 +1,6 @@
 # Asset Register Extractor — DTP PSV & PV
 
-A browser-based engineering data extraction workflow that reads client Excel/CSV, PDF and image documents, maps source information to the 55 AI-populated fields in the DTP PSV & PV workbook, supports manual review, and exports into the original Excel template.
+A browser-based engineering data extraction workflow that reads client Excel/CSV, PDF and image documents, maps source information to the 36 AI-populated fields in the DTP PSV & PV workbook, supports manual review, and exports into the original Excel template.
 
 ## Architecture
 
@@ -16,7 +16,7 @@ A browser-based engineering data extraction workflow that reads client Excel/CSV
 The original workbook is `assets/templates/asset-register-template.xlsx` (the DTP PSV & PV client template).
 
 - Worksheet: `Sheet1`
-- Physical columns: A:BG (59 columns)
+- Physical columns: A:AK (37 columns)
 - Header: rows 1–4, including the original merged headings
 - Row 5: intentionally preserved blank spacer
 - First asset record: row 6
