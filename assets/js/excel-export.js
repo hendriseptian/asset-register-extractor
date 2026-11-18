@@ -33,9 +33,6 @@ document.addEventListener('DOMContentLoaded', () => {
       if (originalMerges.length !== schema.expectedMergedRanges) {
         throw new Error(`Struktur merged cells template berubah: ditemukan ${originalMerges.length}, seharusnya ${schema.expectedMergedRanges}. Export dibatalkan.`);
       }
-      if (schema.expectedHeaderRows && worksheet.getCell(schema.expectedHeaderRows + 1, 1).value !== null) {
-        throw new Error('Baris spacer setelah header berubah. Export dibatalkan agar posisi data tidak bergeser.');
-      }
       if (worksheet.getRow(schema.firstDataRow).number !== schema.firstDataRow) {
         throw new Error('Baris awal data tidak valid.');
       }
@@ -69,7 +66,7 @@ document.addEventListener('DOMContentLoaded', () => {
       anchor.remove();
       setTimeout(() => URL.revokeObjectURL(objectUrl), 2000);
       const missingTags = rows.filter((record) => !String(record.tag_psv || '').trim()).length;
-      notify(`Excel berhasil diunduh: ${rows.length} record ditulis mulai baris ${firstDataRow}. Template baru 39 kolom (A:AM), 4 baris header, 1 baris spacer, dan 19 merged ranges dipertahankan. Tidak ada kolom konversi tekanan pada format ini.${missingTags ? ` Perhatian: ${missingTags} record belum memiliki Tag PSV.` : ''} Verifikasi seluruh data terhadap dokumen sumber sebelum digunakan.`, 'success');
+      notify(`Excel berhasil diunduh: ${rows.length} record ditulis mulai baris ${firstDataRow}. Template baru 39 kolom (A:AM), 4 baris header, dan 19 merged ranges dipertahankan. Tidak ada kolom konversi tekanan pada format ini.${missingTags ? ` Perhatian: ${missingTags} record belum memiliki Tag PSV.` : ''} Verifikasi seluruh data terhadap dokumen sumber sebelum digunakan.`, 'success');
     } catch (error) {
       console.error(error);
       notify(`Export gagal: ${error.message}`, 'error');
