@@ -1,4 +1,4 @@
-/* Exports reviewed records into the current 37-column DTP PSV Asset Register workbook. */
+/* Exports reviewed records into the current 39-column DTP PSV Asset Register workbook. */
 document.addEventListener('DOMContentLoaded', () => {
   const button = document.getElementById('export-btn');
   const status = document.getElementById('review-status');
@@ -27,14 +27,17 @@ document.addEventListener('DOMContentLoaded', () => {
       const worksheet = workbook.getWorksheet(schema.worksheet) || workbook.worksheets[0];
       if (!worksheet) throw new Error(`Worksheet ${schema.worksheet} tidak ditemukan.`);
       if (worksheet.columnCount !== schema.totalTemplateColumns) {
-        throw new Error(`Struktur template tidak sesuai: ditemukan ${worksheet.columnCount} kolom, seharusnya ${schema.totalTemplateColumns} (A:AK). Export dibatalkan.`);
+        throw new Error(`Struktur template tidak sesuai: ditemukan ${worksheet.columnCount} kolom, seharusnya ${schema.totalTemplateColumns} (A:AM). Export dibatalkan.`);
       }
       const originalMerges = [...worksheet.model.merges].sort();
       if (originalMerges.length !== schema.expectedMergedRanges) {
         throw new Error(`Struktur merged cells template berubah: ditemukan ${originalMerges.length}, seharusnya ${schema.expectedMergedRanges}. Export dibatalkan.`);
       }
-      if (worksheet.rowCount !== 4) {
-        throw new Error(`Template harus memiliki tepat 4 baris header. Ditemukan ${worksheet.rowCount}. Export dibatalkan agar format tidak rusak.`);
+      if (schema.expectedHeaderRows && worksheet.getCell(schema.expectedHeaderRows + 1, 1).value !== null) {
+        throw new Error('Baris spacer setelah header berubah. Export dibatalkan agar posisi data tidak bergeser.');
+      }
+      if (worksheet.getRow(schema.firstDataRow).number !== schema.firstDataRow) {
+        throw new Error('Baris awal data tidak valid.');
       }
       const firstDataRow = schema.firstDataRow;
       rows.forEach((record, index) => {
@@ -66,7 +69,7 @@ document.addEventListener('DOMContentLoaded', () => {
       anchor.remove();
       setTimeout(() => URL.revokeObjectURL(objectUrl), 2000);
       const missingTags = rows.filter((record) => !String(record.tag_psv || '').trim()).length;
-      notify(`Excel berhasil diunduh: ${rows.length} record ditulis mulai baris ${firstDataRow}. Template baru 37 kolom (A:AK), 4 baris header, dan 18 merged ranges dipertahankan. Tidak ada kolom konversi tekanan pada format ini.${missingTags ? ` Perhatian: ${missingTags} record belum memiliki Tag PSV.` : ''} Verifikasi seluruh data terhadap dokumen sumber sebelum digunakan.`, 'success');
+      notify(`Excel berhasil diunduh: ${rows.length} record ditulis mulai baris ${firstDataRow}. Template baru 39 kolom (A:AM), 4 baris header, 1 baris spacer, dan 19 merged ranges dipertahankan. Tidak ada kolom konversi tekanan pada format ini.${missingTags ? ` Perhatian: ${missingTags} record belum memiliki Tag PSV.` : ''} Verifikasi seluruh data terhadap dokumen sumber sebelum digunakan.`, 'success');
     } catch (error) {
       console.error(error);
       notify(`Export gagal: ${error.message}`, 'error');
