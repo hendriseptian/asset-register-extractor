@@ -36,7 +36,7 @@ The exporter loads the actual `.xlsx` template and writes data rows into it. It 
 4. Gemini returns records using the canonical DTP PSV field keys. Unknown values are `null`; the model is instructed not to guess or silently convert units.
 5. Use **Field Mapping** to add optional client-specific alias hints.
 6. Use **Data Review** to edit all extracted values, inspect confidence and source file/location, and correct missing or duplicate tags.
-7. Click **Export DTP Excel** to download a copy of the original template populated from row 6.
+7. Click **Export DTP Excel** to download a copy of the original template populated from row 5.
 
 ## Cloudflare Worker configuration
 
