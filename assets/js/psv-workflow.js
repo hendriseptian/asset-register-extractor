@@ -244,15 +244,31 @@
     if (!records.length) {
       host.innerHTML = '<p class="muted">Belum ada record. Upload dokumen client melalui menu New Extraction.</p>';
     } else {
-      const headers = dataFields.map((field) => `<th title="Template column ${field.column}">${field.column} · ${escapeHtml(field.label)}</th>`).join('');
+      const visibleFields = schema.fields;
+      const grouped = [];
+      visibleFields.forEach((field) => {
+        const group = field.group || 'Other';
+        const last = grouped[grouped.length - 1];
+        if (last && last.group === group) last.fields.push(field);
+        else grouped.push({ group, fields: [field] });
+      });
+      const groupHeaders = grouped.map((group) =>
+        `<th class="group-header" colspan="${group.fields.length}">${escapeHtml(group.group)}</th>`
+      ).join('') + '<th class="group-header review-meta-group" colspan="3">Review Metadata</th>';
+      const fieldHeaders = visibleFields.map((field) =>
+        `<th class="field-header" title="Template column ${field.column}">${field.column} · ${escapeHtml(field.label)}</th>`
+      ).join('') + '<th class="field-header">AI Confidence</th><th class="field-header">Source File</th><th class="field-header">Source Location</th>';
       const rows = records.map((record, rowIndex) => {
         const needsReview = Number(record._confidence ?? 0.5) < 0.7 || !String(record.tag_psv || '').trim();
-        const inputs = dataFields.map((field) => `<td><input data-row="${rowIndex}" data-field="${field.key}" value="${escapeHtml(record[field.key] ?? '')}" title="${escapeHtml(field.label)} · ${field.column}"></td>`).join('');
-        return `<tr class="${needsReview ? 'needs-review' : ''}"><td>${rowIndex + 1}</td>${inputs}
+        const cells = visibleFields.map((field) => {
+          if (field.auto) return `<td class="auto-number">${rowIndex + 1}</td>`;
+          return `<td><input data-row="${rowIndex}" data-field="${field.key}" value="${escapeHtml(record[field.key] ?? '')}" title="${escapeHtml(field.label)} · ${field.column}"></td>`;
+        }).join('');
+        return `<tr class="${needsReview ? 'needs-review' : ''}">${cells}
           <td>${Math.round(Number(record._confidence ?? 0.5) * 100)}%</td><td>${escapeHtml(record._source_file || '')}</td><td>${escapeHtml(record._source_location || '')}</td></tr>`;
       }).join('');
-      host.innerHTML = `<div class="review-help">Edit values directly before export. Scroll horizontally to inspect all ${dataFields.length} mapped fields. Low-confidence rows or rows without Tag PSV are highlighted for review.</div>
-        <table class="review-table"><thead><tr><th>#</th>${headers}<th>AI confidence</th><th>Source file</th><th>Source location</th></tr></thead><tbody>${rows}</tbody></table>`;
+      host.innerHTML = `<div class="review-help">Edit values directly before export. Preview follows the Excel template's grouped headers and column order (A:AM). Scroll horizontally to inspect all 39 template columns. AI confidence and source references are review metadata, not Excel columns.</div>
+        <table class="review-table"><thead><tr class="group-header-row">${groupHeaders}</tr><tr class="field-header-row">${fieldHeaders}</tr></thead><tbody>${rows}</tbody></table>`;
       host.querySelectorAll('input[data-row]').forEach((inputElement) => {
         inputElement.addEventListener('change', () => {
           const record = records[Number(inputElement.dataset.row)];
