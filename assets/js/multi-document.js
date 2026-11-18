@@ -139,12 +139,16 @@
     const rawRecords=[],errors=[],meta=[];
     try{
       const url=workerUrl();
-      const knownHashes=new Set(processedFiles().map(item=>item.hash).filter(Boolean));
+      // Reuse protection only while Data Review still contains extracted records.
+      // Clearing the review allows these same source documents to be processed again.
+      const reviewHasData=readJson('are_records',[]).length>0;
+      const knownEntries=reviewHasData?processedFiles():[];
+      const knownHashes=new Set(knownEntries.map(item=>item.hash).filter(Boolean));
       const seenHashes=new Set(),fresh=[];
       const skipped=[];
       for(const file of files){
         const hash=await hashFile(file);
-        const legacyMatch=processedFiles().some(item=>!item.hash&&item.name===file.name&&Number(item.size)===file.size);
+        const legacyMatch=knownEntries.some(item=>!item.hash&&item.name===file.name&&Number(item.size)===file.size);
         if(knownHashes.has(hash)||legacyMatch||seenHashes.has(hash)){skipped.push(file.name);continue;}
         seenHashes.add(hash);fresh.push({file,hash});
       }
