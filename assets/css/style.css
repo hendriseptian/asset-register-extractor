@@ -61,3 +61,14 @@ input:focus,select:focus{outline:3px solid #1769aa20;border-color:#3987bd}
  .workflow-grid{grid-template-columns:1fr}
  .app-shell{display:block}
 }
+
+
+/* Application authorship footer watermark */
+.site-footer{
+ display:flex;justify-content:center;align-items:center;gap:7px;flex-wrap:wrap;
+ margin:34px auto 12px;padding:16px 12px 8px;
+ border-top:1px solid #dce4eb;color:#7b8b99;
+ font-size:11px;letter-spacing:.035em;text-align:center;
+}
+.site-footer strong{color:#36536b;font-weight:700}
+.site-footer .footer-year{color:#94a3af}
