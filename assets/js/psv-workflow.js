@@ -44,8 +44,9 @@
     const digest = await crypto.subtle.digest('SHA-256', bytes);
     return Array.from(new Uint8Array(digest), (byte) => byte.toString(16).padStart(2, '0')).join('');
   }
-  function processedFileHashes() {
-    return new Set(getFiles().map((entry) => entry.hash).filter(Boolean));
+  function processedFileEntries() {
+    try { return [...getFiles(), ...JSON.parse(localStorage.getItem('are_processed_files') || '[]')]; }
+    catch { return getFiles(); }
   }
   const getAliases = () => {
     try { return JSON.parse(localStorage.getItem('are_mapping') || '{}'); }
@@ -180,13 +181,15 @@
       const metadata = [];
       try {
         const workerUrl = getWorkerUrl();
-        const knownHashes = processedFileHashes();
+        const knownEntries = processedFileEntries();
+        const knownHashes = new Set(knownEntries.map((entry) => entry.hash).filter(Boolean));
         const seenHashes = new Set();
         const freshFiles = [];
         const skippedDuplicates = [];
         for (const file of selectedFiles) {
           const hash = await hashFile(file);
-          if (knownHashes.has(hash) || seenHashes.has(hash)) {
+          const legacyMatch = knownEntries.some((entry) => !entry.hash && entry.name === file.name && Number(entry.size) === file.size);
+          if (knownHashes.has(hash) || legacyMatch || seenHashes.has(hash)) {
             skippedDuplicates.push(file.name);
             continue;
           }
@@ -211,7 +214,12 @@
           } catch (error) { errors.push(`${file.name}: ${error.message}`); }
         }
         if (newRecords.length) saveRecords(getRecords().concat(newRecords));
-        if (metadata.length) sessionStorage.setItem('are_files', JSON.stringify(getFiles().concat(metadata)));
+        if (metadata.length) {
+          sessionStorage.setItem('are_files', JSON.stringify(getFiles().concat(metadata)));
+          const registry = (() => { try { return JSON.parse(localStorage.getItem('are_processed_files') || '[]'); } catch { return []; } })();
+          const known = new Set(registry.map((entry) => entry.hash));
+          localStorage.setItem('are_processed_files', JSON.stringify(registry.concat(metadata.filter((entry) => !known.has(entry.hash)))));
+        }
         const skippedMessage = skippedDuplicates.length ? ` ${skippedDuplicates.length} file duplikat dilewati tanpa memakai kuota AI.` : '';
         if (errors.length) showNotice(status, `Sebagian file gagal diproses:\n${errors.join('\n')}\n${newRecords.length} record baru berhasil diekstrak.${skippedMessage}`, 'error');
         else showNotice(status, `Selesai. ${newRecords.length} record baru berhasil diekstrak.${skippedMessage} Preview sebelumnya tetap dipertahankan. Lanjutkan ke Data Review.`, 'success');
