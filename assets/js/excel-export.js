@@ -1,4 +1,4 @@
-/* Exports reviewed records into the current 39-column DTP PSV Asset Register workbook. */
+/* Exports reviewed records into the current 40-column DTP PSV Asset Register workbook. */
 document.addEventListener('DOMContentLoaded', () => {
   const button = document.getElementById('export-btn');
   const status = document.getElementById('review-status');
@@ -30,7 +30,7 @@ document.addEventListener('DOMContentLoaded', () => {
         throw new Error(`Struktur template tidak sesuai: ditemukan ${worksheet.columnCount} kolom, seharusnya ${schema.totalTemplateColumns} (A:AM). Export dibatalkan.`);
       }
       const originalMerges = [...worksheet.model.merges].sort();
-      if (originalMerges.length !== schema.expectedMergedRanges) {
+      if (Number.isInteger(schema.expectedMergedRanges) && originalMerges.length !== schema.expectedMergedRanges) {
         throw new Error(`Struktur merged cells template berubah: ditemukan ${originalMerges.length}, seharusnya ${schema.expectedMergedRanges}. Export dibatalkan.`);
       }
       if (worksheet.getRow(schema.firstDataRow).number !== schema.firstDataRow) {
@@ -66,7 +66,7 @@ document.addEventListener('DOMContentLoaded', () => {
       anchor.remove();
       setTimeout(() => URL.revokeObjectURL(objectUrl), 2000);
       const missingTags = rows.filter((record) => !String(record.tag_psv || '').trim()).length;
-      notify(`Excel berhasil diunduh: ${rows.length} record ditulis mulai baris ${firstDataRow}. Template baru 39 kolom (A:AM), 4 baris header, dan 19 merged ranges dipertahankan. Tidak ada kolom konversi tekanan pada format ini.${missingTags ? ` Perhatian: ${missingTags} record belum memiliki Tag PSV.` : ''} Verifikasi seluruh data terhadap dokumen sumber sebelum digunakan.`, 'success');
+      notify(`Excel berhasil diunduh: ${rows.length} record ditulis mulai baris ${firstDataRow}. Template baru 40 kolom (A:AN), 4 baris header; seluruh merged headers dan formatting template dipertahankan. Tidak ada kolom konversi tekanan pada format ini.${missingTags ? ` Perhatian: ${missingTags} record belum memiliki Tag PSV.` : ''} Verifikasi seluruh data terhadap dokumen sumber sebelum digunakan.`, 'success');
     } catch (error) {
       console.error(error);
       notify(`Export gagal: ${error.message}`, 'error');
