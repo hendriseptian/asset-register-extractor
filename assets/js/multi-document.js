@@ -11,7 +11,7 @@
     return value;
   };
   const aliases = () => { try { return JSON.parse(localStorage.getItem('are_mapping') || '{}'); } catch { return {}; } };
-  const processedFiles = () => readJson('are_files', []);
+  const processedFiles = () => { try { return [...readJson('are_files', []), ...JSON.parse(localStorage.getItem('are_processed_files') || '[]')]; } catch { return readJson('are_files', []); } };
   async function hashFile(file) {
     if (!globalThis.crypto?.subtle) throw new Error('Browser tidak mendukung pemeriksaan duplikasi file. Gunakan HTTPS atau browser terbaru.');
     const digest = await crypto.subtle.digest('SHA-256', await file.arrayBuffer());
@@ -144,7 +144,8 @@
       const skipped=[];
       for(const file of files){
         const hash=await hashFile(file);
-        if(knownHashes.has(hash)||seenHashes.has(hash)){skipped.push(file.name);continue;}
+        const legacyMatch=processedFiles().some(item=>!item.hash&&item.name===file.name&&Number(item.size)===file.size);
+        if(knownHashes.has(hash)||legacyMatch||seenHashes.has(hash)){skipped.push(file.name);continue;}
         seenHashes.add(hash);fresh.push({file,hash});
       }
       if(!fresh.length){
@@ -170,7 +171,12 @@
         const finalRecords=consolidate(existing.concat(merged));
         sessionStorage.setItem('are_records',JSON.stringify(finalRecords));
       }
-      if(meta.length) sessionStorage.setItem('are_files',JSON.stringify(processedFiles().concat(meta)));
+      if(meta.length){
+        sessionStorage.setItem('are_files',JSON.stringify(readJson('are_files',[]).concat(meta)));
+        const registry=(()=>{try{return JSON.parse(localStorage.getItem('are_processed_files')||'[]')}catch{return []}})();
+        const known=new Set(registry.map(item=>item.hash));
+        localStorage.setItem('are_processed_files',JSON.stringify(registry.concat(meta.filter(item=>!known.has(item.hash)))));
+      }
       const duplicateCount=rawRecords.length-merged.length;
       const conflictCount=readJson('are_records',[]).reduce((n,r)=>n+(r._merge_conflicts||[]).length,0);
       const skippedMessage=skipped.length?' '+skipped.length+' duplicate file(s) skipped without using AI quota.':'';
