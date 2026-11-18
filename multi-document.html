@@ -1,0 +1,37 @@
+<!DOCTYPE html>
+<html lang="en"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Multi-Document Upload | Asset Register Extractor</title>
+<link rel="stylesheet" href="assets/css/style.css">
+</head>
+<body><div class="app-shell">
+<aside class="sidebar"><div class="sidebar-brand"><span class="brand-mark small">AR</span><div><b>Asset Register</b><small>Extractor</small></div></div>
+<nav>
+<a href="dashboard.html">Dashboard</a>
+<a href="extraction.html">New Extraction</a>
+<a class="active" href="multi-document.html">Multi-Document Upload</a>
+<a href="mapping.html">Field Mapping</a>
+<a href="review.html">Data Review</a>
+</nav>
+<div class="sidebar-bottom"><a href="index.html">Settings / Worker URL</a></div></aside>
+<main class="main-content">
+<header class="topbar"><div><p class="eyebrow">STEP 01B · CONSOLIDATED SOURCES</p><h1>Multi-Document Upload</h1></div><a href="dashboard.html" class="text-link">Back to dashboard</a></header>
+<section class="panel">
+<div class="panel-heading"><div><h2>Upload documents for the same PSV / asset</h2><p class="muted">Upload supporting PDF, Excel, CSV or image files. The system extracts each file separately, then combines records with the same Tag PSV.</p></div><span class="status-pill">Multi-source</span></div>
+<div id="multi-drop-zone" class="drop-zone"><div class="upload-icon">↑</div><h3>Drop supporting files here or browse</h3><p class="muted">Select multiple documents belonging to one or more assets</p><input id="multi-file-input" type="file" multiple accept=".xlsx,.xls,.csv,.pdf,.png,.jpg,.jpeg,.webp"></div>
+<div id="multi-file-list" class="file-list"></div>
+<div class="actions"><button id="multi-extract-btn" class="btn primary" disabled>Extract & consolidate</button><button id="multi-clear-btn" class="btn secondary">Clear files</button></div>
+<div id="multi-status" class="notice" hidden></div>
+</section>
+<section class="panel"><h2>How consolidation works</h2><ul class="plain-list">
+<li>Each source document is processed independently by the configured Cloudflare Worker.</li>
+<li>Records are grouped only when their Tag PSV matches. Records without a Tag PSV are not automatically combined.</li>
+<li>Empty fields can be filled by another matching document.</li>
+<li>If two documents contain different non-empty values for the same field, the existing value is retained and the difference is flagged for review.</li>
+<li>Source file names and source locations are retained for traceability.</li>
+<li>Review the consolidated records before exporting. AI extraction is a draft and requires engineering verification.</li>
+</ul></section>
+</main></div>
+<script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+<script src="assets/js/psv-schema.js"></script>
+<script src="assets/js/multi-document.js"></script>
+</body></html>
