@@ -11,6 +11,12 @@
     return value;
   };
   const aliases = () => { try { return JSON.parse(localStorage.getItem('are_mapping') || '{}'); } catch { return {}; } };
+  const processedFiles = () => readJson('are_files', []);
+  async function hashFile(file) {
+    if (!globalThis.crypto?.subtle) throw new Error('Browser tidak mendukung pemeriksaan duplikasi file. Gunakan HTTPS atau browser terbaru.');
+    const digest = await crypto.subtle.digest('SHA-256', await file.arrayBuffer());
+    return Array.from(new Uint8Array(digest), byte => byte.toString(16).padStart(2, '0')).join('');
+  }
   const input = $('multi-file-input'), zone = $('multi-drop-zone'), list = $('multi-file-list');
   const run = $('multi-extract-btn'), clear = $('multi-clear-btn'), status = $('multi-status');
   let files = [];
@@ -133,8 +139,20 @@
     const rawRecords=[],errors=[],meta=[];
     try{
       const url=workerUrl();
-      for(let i=0;i<files.length;i++){
-        const file=files[i],ext=file.name.split('.').pop().toLowerCase();
+      const knownHashes=new Set(processedFiles().map(item=>item.hash).filter(Boolean));
+      const seenHashes=new Set(),fresh=[];
+      const skipped=[];
+      for(const file of files){
+        const hash=await hashFile(file);
+        if(knownHashes.has(hash)||seenHashes.has(hash)){skipped.push(file.name);continue;}
+        seenHashes.add(hash);fresh.push({file,hash});
+      }
+      if(!fresh.length){
+        notice('Tidak ada ekstraksi baru. '+skipped.length+' file sudah pernah diproses. Preview lama tetap dipertahankan dan kuota AI tidak digunakan.','success');
+        return;
+      }
+      for(let i=0;i<fresh.length;i++){
+        const {file,hash}=fresh[i],ext=file.name.split('.').pop().toLowerCase();
         try{
           const records=['xlsx','xls','csv'].includes(ext)
             ? await extractSpreadsheet(file,url)
@@ -142,20 +160,22 @@
               ? await extractDocument(file,url)
               : (()=>{throw new Error('Unsupported file format.');})();
           rawRecords.push(...records);
-          meta.push({name:file.name,size:file.size,type:ext});
-          notice('Extracted '+(i+1)+'/'+files.length+': '+file.name+' — '+records.length+' record(s).');
+          meta.push({name:file.name,size:file.size,type:ext,hash,processed_at:new Date().toISOString()});
+          notice('Extracted '+(i+1)+'/'+fresh.length+': '+file.name+' — '+records.length+' record(s).');
         }catch(err){errors.push(file.name+': '+err.message);}
       }
       const merged=consolidate(rawRecords);
       const existing=readJson('are_records',[]);
-      const finalRecords=consolidate(existing.concat(merged));
-      sessionStorage.setItem('are_records',JSON.stringify(finalRecords));
-      const previousFiles=readJson('are_files',[]);
-      sessionStorage.setItem('are_files',JSON.stringify(previousFiles.concat(meta)));
+      if(rawRecords.length){
+        const finalRecords=consolidate(existing.concat(merged));
+        sessionStorage.setItem('are_records',JSON.stringify(finalRecords));
+      }
+      if(meta.length) sessionStorage.setItem('are_files',JSON.stringify(processedFiles().concat(meta)));
       const duplicateCount=rawRecords.length-merged.length;
-      const conflictCount=finalRecords.reduce((n,r)=>n+(r._merge_conflicts||[]).length,0);
-      if(errors.length) notice('Partial completion. '+rawRecords.length+' extracted record(s), '+merged.length+' consolidated record(s). Errors: '+errors.join(' | '),'error');
-      else notice('Completed: '+rawRecords.length+' source record(s) consolidated into '+merged.length+' record(s). '+duplicateCount+' matching record(s) merged; '+conflictCount+' conflict(s) need review. Open Data Review to verify before export.','success');
+      const conflictCount=readJson('are_records',[]).reduce((n,r)=>n+(r._merge_conflicts||[]).length,0);
+      const skippedMessage=skipped.length?' '+skipped.length+' duplicate file(s) skipped without using AI quota.':'';
+      if(errors.length) notice('Partial completion. '+rawRecords.length+' extracted record(s), '+merged.length+' consolidated record(s). Errors: '+errors.join(' | ')+skippedMessage,'error');
+      else notice('Completed: '+rawRecords.length+' source record(s) consolidated into '+merged.length+' record(s). '+duplicateCount+' matching record(s) merged; '+conflictCount+' conflict(s) need review.'+skippedMessage+' Previous preview records were retained. Open Data Review to verify before export.','success');
     }catch(err){notice(err.message,'error');}
     finally{run.disabled=files.length<2;clear.disabled=false;}
   });
