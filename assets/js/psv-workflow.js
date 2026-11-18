@@ -234,7 +234,8 @@
       const duplicateCount = tags.filter((tag, index) => tags.indexOf(tag) !== index).length;
       const missingTagCount = records.filter((record) => !String(record.tag_psv || '').trim()).length;
       const lowConfidenceCount = records.filter((record) => Number(record._confidence ?? 0.5) < 0.7).length;
-      const emptyCount = records.reduce((total, record) => total + dataFields.filter((field) => record[field.key] == null || String(record[field.key]).trim() === '').length, 0);\n      const conflictCount = records.reduce((total, record) => total + (Array.isArray(record._merge_conflicts) ? record._merge_conflicts.length : 0), 0);
+      const emptyCount = records.reduce((total, record) => total + dataFields.filter((field) => record[field.key] == null || String(record[field.key]).trim() === '').length, 0);
+      const conflictCount = records.reduce((total, record) => total + (Array.isArray(record._merge_conflicts) ? record._merge_conflicts.length : 0), 0);
       summary.innerHTML = [
         `${records.length} records`, `${missingTagCount} missing Tag PSV`, `${duplicateCount} duplicate tag(s)`,
         `${lowConfidenceCount} low-confidence`, `${emptyCount} empty fields`, `${conflictCount} merge conflict(s)`
