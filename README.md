@@ -1,6 +1,6 @@
 # Asset Register Extractor — DTP PSV & PV
 
-A browser-based engineering data extraction workflow that reads client Excel/CSV, PDF and image documents, maps source information to the 36 AI-populated fields in the DTP PSV & PV workbook, supports manual review, and exports into the original Excel template.
+A browser-based engineering data extraction workflow that reads client Excel/CSV, PDF and image documents, maps source information to the 38 AI-populated fields in the DTP PSV & PV workbook, supports manual review, and exports into the original Excel template.
 
 ## Architecture
 
@@ -13,19 +13,21 @@ A browser-based engineering data extraction workflow that reads client Excel/CSV
 
 ## Target workbook
 
-The original workbook is `assets/templates/asset-register-template.xlsx` (the DTP PSV & PV client template).
+The current workbook is `assets/templates/asset-register-template.xlsx` (latest user-provided DTP PSV & PV template).
 
 - Worksheet: `Sheet1`
-- Physical columns: A:AK (37 columns)
+- Physical columns: A:AM (39 columns)
 - Header: rows 1–4, including the original merged headings
-- Row 5: intentionally preserved blank spacer
+- Row 5: blank spacer row preserved
 - First asset record: row 6
 - Column A (`No.`): generated sequentially
-- Column AI: existing formula `=AJ6/AG6*100%` is preserved
-- Columns AO and AQ: intentionally blank spacer columns
-- Remaining 55 fields: mapped by Gemini and editable in Data Review
+- Columns AC:AD: protected equipment type and item number
+- Columns AE:AF: protected equipment design and operating temperature
+- Columns AG:AH: protected equipment design and operating pressure
+- Columns AI:AK: orifice area
+- Columns AL:AM: capacity
 
-The exporter loads the actual `.xlsx` template and writes data rows into it. It does not recreate the workbook, so the original merged header cells, column widths, header text, and formula remain in place.
+The exporter loads the actual `.xlsx` template and writes data rows into it. It does not recreate the workbook, so the original merged header cells, column widths, header text, and formatting remain in place.
 
 ## Workflow
 
