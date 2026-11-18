@@ -72,3 +72,11 @@ input:focus,select:focus{outline:3px solid #1769aa20;border-color:#3987bd}
 }
 .site-footer strong{color:#36536b;font-weight:700}
 .site-footer .footer-year{color:#94a3af}
+
+
+/* Keep the original engineering note above the author watermark */
+.site-footer{display:flex;flex-direction:column;justify-content:center;align-items:center;gap:5px}
+.site-footer .footer-note{margin:0;color:#8293a2;font-size:11px;text-align:center}
+.footer-watermark{color:#7b8b99;font-size:11px;letter-spacing:.035em;text-align:center}
+.footer-watermark strong{color:#36536b;font-weight:700}
+.footer-watermark span{color:#94a3af;margin-left:4px}
