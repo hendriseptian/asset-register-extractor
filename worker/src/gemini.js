@@ -56,11 +56,14 @@ async function callGemini({apiKey, model, parts}) {
       } catch (error) {
         lastError = error;
         const locationRejected = error.status === 400 && LOCATION_ERROR.test(error.message);
-        const retryable = RETRYABLE_STATUS.has(error.status) || locationRejected;
-        if (!retryable) throw error;
-        // Cloudflare edge egress can be classified inconsistently by Google's location gate.
-        // Retry this exact FAILED_PRECONDITION briefly; do not switch models because region is not model-specific.
-        if (attempt === 0) await wait(locationRejected ? 1500 : 700);
+        if (locationRejected) {
+          // Cloudflare edge egress can be classified inconsistently by Google's location gate.
+          // Retry once; changing models cannot fix a request-origin region rejection.
+          if (attempt === 0) { await wait(1500); continue; }
+          throw error;
+        }
+        if (!RETRYABLE_STATUS.has(error.status)) throw error;
+        if (attempt === 0) await wait(700);
       }
     }
   }
