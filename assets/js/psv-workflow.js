@@ -205,7 +205,7 @@
         ${fields.map((field) => `<tr><td><b>${field.column}</b></td><td>${escapeHtml(field.label)}</td><td class="alias-list">${escapeHtml(field.aliases.join(', ') || 'Automatic sequence')}</td>
         <td><input data-field="${field.key}" value="${escapeHtml(savedAliases[field.key] || '')}" placeholder="Additional terms, comma-separated" ${field.auto ? 'disabled' : ''}></td></tr>`).join('')}
         </tbody></table></div></section>`;
-    }).join('') + '<div class="notice">39 physical columns A–AM from the uploaded DTP workbook. Column A (No.) is generated automatically; records start at row 6.</div>';
+    }).join('') + '<div class="notice">39 physical columns A–AM from the uploaded DTP workbook. Column A (No.) is generated automatically; records start at row 5.</div>';
     $('save-mapping').addEventListener('click', () => {
       const aliases = {};
       host.querySelectorAll('input[data-field]').forEach((inputElement) => {
