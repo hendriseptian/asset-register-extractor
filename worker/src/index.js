@@ -48,7 +48,7 @@ function normalizeBvvYearAndUsed(record) {
   const output = { ...record };
   // Example: "1994/1994" under "Tahun Dibuat / Digunakan"
   // means Built=1994 and Used=1994, not a date.
-  const combined = String(output.year_built ?? '').trim().match(/^(\\d{4})\\s*\\/\\s*(\\d{4})$/);
+  const combined = String(output.year_built ?? '').trim().match(/^(\d{4})\s*\/\s*(\d{4})$/);
   if (combined) {
     output.year_built = combined[1];
     if (!String(output.used ?? '').trim()) output.used = combined[2];
