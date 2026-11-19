@@ -1,0 +1,18 @@
+<!DOCTYPE html><html lang="en"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>New Extraction · Asset Register Extractor</title><link rel="stylesheet" href="assets/css/style.css">  <link rel="icon" type="image/png" href="assets/favicon.png">
+  <script src="assets/js/theme.js" defer></script>
+</head>
+<body><div class="app-shell"><aside class="sidebar"><div class="sidebar-brand"><span class="brand-mark small">MI</span><div><b>MECHANICAL INTEGRITY</b><small>Engineering Workspace</small></div></div><nav>
+<a href="dashboard.html">Dashboard</a>
+<a href="extraction.html">PSV Extraction</a>
+<a class="active" href="bvv-extraction.html">BV/BVV Extraction</a>
+<a href="multi-document.html">Multi-Document Upload</a>
+<a href="mapping.html">Field Mapping</a>
+<a href="review.html">PSV Data Review</a>
+<a href="bvv-review.html">BV/BVV Data Review</a>
+</nav><div class="sidebar-bottom"><a href="index.html">Settings / Worker URL</a></div></aside>
+<main class="main-content"><header class="topbar"><div><p class="eyebrow">MECHANICAL INTEGRITY · SOURCE DOCUMENTS</p><h1>New Extraction</h1></div><a href="dashboard.html" class="text-link">Back to dashboard</a></header>
+<section class="panel"><div class="panel-heading"><div><h2>Upload client documents</h2><p class="muted">Upload client XLSX, XLS, CSV, PDF, PNG, JPG or WEBP. Gemini maps source information into the DTP BV/BVV register template.</p></div><span class="status-pill">31 AI fields</span></div>
+<div id="drop-zone" class="drop-zone"><div class="upload-icon">↑</div><h3>Drop files here or browse</h3><p class="muted">Select one or more source documents</p><input id="file-input" type="file" multiple accept=".xlsx,.xls,.csv,.pdf,.png,.jpg,.jpeg,.webp"></div><div id="file-list" class="file-list"></div>
+<div class="actions"><button id="extract-btn" class="btn primary" disabled>Extract Data</button><button id="clear-files" class="btn secondary">Clear files</button><a href="bvv-mapping.html" class="btn secondary">Configure BV/BVV aliases</a></div><div id="extract-status" class="notice" hidden></div></section>
+<section class="panel"><h2>Processing rules</h2><ul class="plain-list"><li>Excel/CSV tables are parsed in the browser and sent to Cloudflare Worker in small batches for Gemini semantic mapping.</li><li>PDF and image files are sent to Gemini for document extraction.</li><li>Only source-supported values are populated. Missing information remains blank; units are not silently converted.</li><li>Review all extracted values and source locations before exporting.</li><li>Do not upload confidential client records unless your company permits processing by an external AI service.</li></ul></section><footer class="site-footer"><span>Designed &amp; Developed by <strong>Hendri Septian</strong></span><span class="footer-year">© 2026</span></footer></main></div>
+<script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script><script src="assets/js/bvv-schema.js"></script><script src="assets/js/bvv-workflow.js"></script></body></html>
