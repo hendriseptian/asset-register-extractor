@@ -51,12 +51,12 @@ function normalizeBvvModelAndSize(record) {
 
   // Example: 2010-51/8"#150 -> model=2010-51, size=8", rating=#150.
   // Require an inch marker to avoid splitting ordinary model numbers or fractions.
-  const combined = modelText.match(/^(.+?)\\s*\\/\\s*(\\d+(?:\\s*[- ]\\s*\\d+\\s*\\/\\s*\\d+)?\\s*(?:["″”]|inch(?:es)?|in\\b))\\s*(#\\s*\\d+|class\\s*\\d+)?\\s*$/i);
+  const combined = modelText.match(/^(.+?)\s*\/\s*(\d+(?:\s*[- ]\s*\d+\s*\/\s*\d+)?\s*(?:["″”]|inch(?:es)?|in\b))\s*(#\s*\d+|class\s*\d+)?\s*$/i);
   if (!combined) return output;
 
   const parsedModel = combined[1].trim();
-  const parsedSize = combined[2].trim().replace(/[″”]/g, '"').replace(/\\s+/g, ' ');
-  const parsedRating = combined[3] ? combined[3].replace(/\\s+/g, '').replace(/^class/i, '#') : null;
+  const parsedSize = combined[2].trim().replace(/[″”]/g, '"').replace(/\s+/g, ' ');
+  const parsedRating = combined[3] ? combined[3].replace(/\s+/g, '').replace(/^class/i, '#') : null;
 
   output.model = parsedModel;
   if (!String(output.bvv_size_inch ?? '').trim()) output.bvv_size_inch = parsedSize;
