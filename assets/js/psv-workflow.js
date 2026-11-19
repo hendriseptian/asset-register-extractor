@@ -140,10 +140,31 @@
           const values = headers.map((_, columnIndex) => String(rows[rowIndex]?.[columnIndex] ?? '').trim());
           if (values.some(Boolean)) sourceRows.push({ rowNumber: rowIndex + 1, values });
         }
-        // 15 source rows per Gemini request keeps free-tier requests compact.
-        for (let offset = 0; offset < sourceRows.length; offset += 15) {
-          const batch = sourceRows.slice(offset, offset + 15);
-          extracted.push(...await sendTableBatch(workerUrl, file.name, { name: sheetName, headers }, batch));
+        // Small batches reduce response truncation and improve row-level extraction accuracy.
+        // When a Tag PSV column exists, verify every tagged source row and retry omissions individually.
+        const tagColumn = headers.findIndex((header) => /(?:^|\\b)(?:tag\\s*(?:psv|no|number)?|psv\\s*tag|equipment\\s*tag|tag\\s*number)(?:\\b|$)/i.test(header));
+        const normalizeTag = (value) => String(value ?? '').toUpperCase().replace(/[^A-Z0-9]/g, '');
+        for (let offset = 0; offset < sourceRows.length; offset += 5) {
+          const batch = sourceRows.slice(offset, offset + 5);
+          const batchRecords = await sendTableBatch(workerUrl, file.name, { name: sheetName, headers }, batch);
+          extracted.push(...batchRecords);
+          if (tagColumn >= 0) {
+            const expected = batch.filter((row) => String(row.values[tagColumn] ?? '').trim());
+            const returned = new Set(batchRecords.map((record) => normalizeTag(record.tag_psv)).filter(Boolean));
+            const missing = expected.filter((row) => !returned.has(normalizeTag(row.values[tagColumn])));
+            for (const row of missing) {
+              const retryRecords = await sendTableBatch(workerUrl, file.name, { name: sheetName, headers }, [row]);
+              const match = retryRecords.find((record) => normalizeTag(record.tag_psv) === normalizeTag(row.values[tagColumn]));
+              if (match) extracted.push(match);
+              else extracted.push({
+                tag_psv: row.values[tagColumn],
+                _confidence: 0,
+                _source_file: file.name,
+                _source_location: `${sheetName} · source row ${row.rowNumber} · NEEDS MANUAL REVIEW: source row was not fully extracted by AI`,
+                _extraction_warning: 'Tagged source row was retried individually but AI did not return a complete matching record.'
+              });
+            }
+          }
         }
       }
       return extracted;
