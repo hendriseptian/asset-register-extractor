@@ -1,23 +1,31 @@
 <!DOCTYPE html>
 <html lang="en"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Dashboard | Asset Register Extractor</title><link rel="stylesheet" href="assets/css/style.css"><link rel="stylesheet" href="assets/css/dashboard.css">  <link rel="icon" type="image/png" href="assets/favicon.png">
-  <script src="assets/js/theme.js" defer></script>
-</head>
-<body><div class="app-shell">
-<aside class="sidebar"><div class="sidebar-brand"><span class="brand-mark small">MI</span><div><b>MECHANICAL INTEGRITY</b><small>Engineering Workspace</small></div></div>
-<nav>
-<a class="active" href="dashboard.html">Dashboard</a>
-<a href="extraction.html">PSV Extraction</a>
-<a href="bvv-extraction.html">BV/BVV Extraction</a>
-<a href="multi-document.html">Multi-Document Upload</a>
-<a href="mapping.html">PSV Field Mapping</a>
-<a href="bvv-mapping.html">BV/BVV Field Mapping</a>
-<a href="review.html">PSV Data Review</a>
-<a href="bvv-review.html">BV/BVV Data Review</a>
-</nav>
-<div class="sidebar-bottom"><a href="index.html">Settings / Worker URL</a></div></aside>
-<main class="main-content"><header class="topbar"><div><p class="eyebrow">MECHANICAL INTEGRITY · WORKSPACE</p><h1>Asset Integrity Dashboard</h1></div><span class="status-pill">Local session</span></header>
-<section class="welcome-panel"><div><p class="eyebrow light">MECHANICAL INTEGRITY · ENGINEERING DATA</p><h2>Asset Register Extractor</h2><p>Centralize PSV and pressure equipment records from inspection reports, datasheets, certificates and client registers.</p><a class="btn light-btn" href="extraction.html">Start new extraction</a></div><div class="welcome-icon">▤</div></section>
-<section class="stats-grid"><article class="stat-card"><span>Files in current session</span><strong id="stat-files">0</strong></article><article class="stat-card"><span>Extracted records</span><strong id="stat-records">0</strong></article><article class="stat-card"><span>Items requiring review</span><strong id="stat-review">0</strong></article></section>
-<section class="panel"><div class="panel-heading"><div><p class="eyebrow">GET STARTED</p><h2>Workflow</h2></div></div><div class="workflow-grid"><a href="extraction.html"><b>01 · Upload & extract</b><span>Upload Excel, PDF or image documents.</span></a><a href="multi-document.html"><b>02 · Multi-document consolidation</b><span>Combine supporting documents for the same PSV.</span></a><a href="mapping.html"><b>03 · Field mapping</b><span>Match client fields to standard fields.</span></a><a href="review.html"><b>04 · Review & export</b><span>Check extracted data and export Excel.</span></a></div></section>
-<footer class="site-footer"><p class="footer-note">Designed for engineering asset data preparation · Verify all extracted values against source documents.</p><div class="footer-watermark">Designed &amp; Developed by <strong>Hendri Septian</strong> <span>© 2026</span></div></footer></main></div><script src="assets/js/app.js"></script></body></html>
+<title>Asset Register Extractor | Equipment Selection</title>
+<link rel="stylesheet" href="assets/css/style.css"><link rel="stylesheet" href="assets/css/dashboard.css">
+<link rel="icon" type="image/png" href="assets/favicon.png"><script src="assets/js/theme.js" defer></script>
+<style>
+.selector-shell{min-height:100vh;padding:34px clamp(20px,5vw,76px) 24px;display:flex;flex-direction:column}
+.selector-header{max-width:1120px;width:100%;margin:0 auto 34px;display:flex;justify-content:space-between;align-items:center;gap:20px}
+.selector-brand{display:flex;align-items:center;gap:14px}.selector-brand b{display:block;font:700 14px Manrope;color:var(--ink)}.selector-brand small{color:var(--muted)}
+.selector-main{width:min(1120px,100%);margin:auto}
+.selector-intro{text-align:center;margin-bottom:38px}.selector-intro h1{font-size:clamp(28px,4vw,40px);margin-bottom:12px}.selector-intro p{color:var(--muted);max-width:660px;margin:0 auto}
+.equipment-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:24px}
+.equipment-card{display:flex;flex-direction:column;min-height:290px;padding:30px;border:1px solid var(--line);border-radius:18px;background:var(--white);box-shadow:0 8px 28px #17344d0d;text-decoration:none;color:var(--ink);transition:transform .18s,border-color .18s,box-shadow .18s}
+.equipment-card:hover{transform:translateY(-4px);border-color:#7eafd0;box-shadow:0 14px 32px #17344d18}
+.equipment-icon{width:58px;height:58px;border-radius:15px;display:grid;place-items:center;background:#e5f1fb;color:#145b91;font:800 20px Manrope;margin-bottom:25px}
+.equipment-card h2{font-size:25px;margin-bottom:10px}.equipment-card p{color:var(--muted);line-height:1.7;margin:0 0 24px}
+.equipment-open{margin-top:auto;color:var(--blue);font-weight:700;font-size:13px}
+.selector-footer{margin-top:45px;text-align:center;color:var(--muted);font-size:11px}
+html[data-theme="dark"] .equipment-card{background:#182a3b;border-color:#34495d;color:#edf5fb}
+html[data-theme="dark"] .equipment-icon{background:#203d55;color:#bfe4ff}
+@media(max-width:700px){.equipment-grid{grid-template-columns:1fr}.equipment-card{min-height:230px}.selector-header{align-items:flex-start}}
+</style></head>
+<body><div class="selector-shell">
+<header class="selector-header"><div class="selector-brand"><span class="brand-mark">MI</span><div><b>MECHANICAL INTEGRITY</b><small>Engineering Workspace</small></div></div><a class="text-link" href="index.html">Settings / Worker URL</a></header>
+<main class="selector-main"><section class="selector-intro"><p class="eyebrow">DTP · MECHANICAL INTEGRITY</p><h1>Asset Register Workspace</h1><p>Select the equipment category you want to work on. Each workspace has its own navigation, extraction workflow, field mapping and data review.</p></section>
+<section class="equipment-grid">
+<a class="equipment-card" href="psv-dashboard.html"><span class="equipment-icon">PSV</span><h2>PSV</h2><p>Pressure Safety Valve asset register. Upload inspection reports, datasheets and certificates, consolidate sources, review extracted fields and export the PSV template.</p><span class="equipment-open">Open PSV workspace →</span></a>
+<a class="equipment-card" href="bvv-dashboard.html"><span class="equipment-icon">BV</span><h2>BV / BVV</h2><p>Breather Valve and Breather/Vacuum Valve register. Extract opening pressure, suction vacuum, inspection details and other BV/BVV fields.</p><span class="equipment-open">Open BV/BVV workspace →</span></a>
+</section></main>
+<footer class="selector-footer">Designed for engineering asset data preparation · Verify all extracted values against source documents.<br><br>Designed &amp; Developed by <strong>Hendri Septian</strong> · © 2026</footer>
+</div></body></html>
