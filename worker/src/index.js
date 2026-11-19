@@ -44,6 +44,7 @@ function filenameTagCandidate(fileName) {
   return name.replace(/\s+/g, ' ').trim();
 }
 // Split combined BV/BVV "Model / Ukuran" strings into the workbook's separate fields.
+// BVV_YEAR_SPLIT_FIX_2026_11_19: uses split('/') and digit validation; no year regex.
 function normalizeBvvYearAndUsed(record) {
   const output = { ...record };
   // Example: "1994/1994" under "Tahun Dibuat / Digunakan".
