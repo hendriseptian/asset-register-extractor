@@ -11,7 +11,7 @@ async function requestGemini({apiKey, model, parts}) {
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({
       contents: [{ parts }],
-      generationConfig: { temperature: 0, responseMimeType: 'application/json' }
+      generationConfig: { temperature: 0, responseMimeType: 'application/json', maxOutputTokens: 8192 }
     })
   });
 
@@ -25,7 +25,13 @@ async function requestGemini({apiKey, model, parts}) {
     throw error;
   }
 
-  const output = body.candidates?.[0]?.content?.parts?.map((part) => part.text || '').join('') || '';
+  const candidate = body.candidates?.[0];
+  if (candidate?.finishReason === 'MAX_TOKENS') {
+    const error = new Error('Gemini response reached the output limit. The source batch may be too large; retry with smaller batches.');
+    error.code = 'OUTPUT_TRUNCATED';
+    throw error;
+  }
+  const output = candidate?.content?.parts?.map((part) => part.text || '').join('') || '';
   if (!output) throw new Error(body.promptFeedback?.blockReason
     ? `Gemini blocked the request: ${body.promptFeedback.blockReason}`
     : 'Gemini returned an empty response.');
