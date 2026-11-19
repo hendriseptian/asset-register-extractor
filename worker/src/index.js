@@ -56,7 +56,9 @@ function normalizeRecords(records, fileName = '') {
       output._source_location = [output._source_location, `Tag PSV candidate recovered from filename: ${fileName} (verify against source document)`].filter(Boolean).join(' | ');
     }
     const confidence = Number(record?._confidence);
-    output._confidence = Number.isFinite(confidence) ? Math.max(0, Math.min(1, confidence)) : 0.5;
+    output._confidence = output._tag_source === 'filename_candidate'
+      ? Math.min(0.55, Number.isFinite(confidence) ? Math.max(0, confidence) : 0.5)
+      : (Number.isFinite(confidence) ? Math.max(0, Math.min(1, confidence)) : 0.5);
     return output;
   });
 }
