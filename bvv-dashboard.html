@@ -16,4 +16,14 @@
 <section class="welcome-panel"><div><p class="eyebrow light">MECHANICAL INTEGRITY · ENGINEERING DATA</p><h2>Asset Register Extractor</h2><p>Manage BV/BVV source documents, review opening pressure and vacuum data, and export the BV/BVV register.</p><a class="btn light-btn" href="bvv-extraction.html">Start new extraction</a></div><div class="welcome-icon">▤</div></section>
 <section class="stats-grid"><article class="stat-card"><span>Files in current session</span><strong id="stat-files">0</strong></article><article class="stat-card"><span>Extracted records</span><strong id="stat-records">0</strong></article><article class="stat-card"><span>Items requiring review</span><strong id="stat-review">0</strong></article></section>
 <section class="panel"><div class="panel-heading"><div><p class="eyebrow">GET STARTED</p><h2>Workflow</h2></div></div><div class="workflow-grid"><a href="extraction.html"><b>01 · Upload & extract</b><span>Upload Excel, PDF or image documents.</span></a><a href="multi-document.html"><b>02 · Multi-document consolidation</b><span>Combine supporting documents for the same PSV.</span></a><a href="mapping.html"><b>03 · Field mapping</b><span>Match client fields to standard fields.</span></a><a href="review.html"><b>04 · Review & export</b><span>Check extracted data and export Excel.</span></a></div></section>
-<footer class="site-footer"><p class="footer-note">Designed for engineering asset data preparation · Verify all extracted values against source documents.</p><div class="footer-watermark">Designed &amp; Developed by <strong>Hendri Septian</strong> <span>© 2026</span></div></footer></main></div><script src="assets/js/app.js"></script></body></html>
+<footer class="site-footer"><p class="footer-note">Designed for engineering asset data preparation · Verify all extracted values against source documents.</p><div class="footer-watermark">Designed &amp; Developed by <strong>Hendri Septian</strong> <span>© 2026</span></div></footer></main></div><script>
+(function(){
+ const read=(key)=>{try{return JSON.parse(sessionStorage.getItem(key)||"[]")}catch{return []}};
+ const records=read("are_bvv_records"), files=read("are_bvv_files");
+ const tags=records.map(r=>String(r.tag_bvv||"").trim().toLowerCase()).filter(Boolean);
+ const duplicates=tags.filter((tag,i)=>tags.indexOf(tag)!==i).length;
+ const set=(id,value)=>{const node=document.getElementById(id);if(node)node.textContent=value};
+ set("stat-files",files.length);set("stat-records",records.length);
+ set("stat-review",records.filter(r=>!String(r.tag_bvv||"").trim()||Number(r._confidence??.5)<.7).length+duplicates);
+})();
+</script></body></html>
