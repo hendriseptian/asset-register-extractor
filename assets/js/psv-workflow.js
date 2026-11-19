@@ -142,7 +142,7 @@
         }
         // Small batches reduce response truncation and improve row-level extraction accuracy.
         // When a Tag PSV column exists, verify every tagged source row and retry omissions individually.
-        const tagColumn = headers.findIndex((header) => /(?:^|\\b)(?:tag\\s*(?:psv|no|number)?|psv\\s*tag|equipment\\s*tag|tag\\s*number)(?:\\b|$)/i.test(header));
+        const tagColumn = headers.findIndex((header) => /(?:^|\b)(?:tag\s*(?:psv|no|number)?|psv\s*tag|equipment\s*tag|tag\s*number)(?:\b|$)/i.test(header));
         const normalizeTag = (value) => String(value ?? '').toUpperCase().replace(/[^A-Z0-9]/g, '');
         for (let offset = 0; offset < sourceRows.length; offset += 5) {
           const batch = sourceRows.slice(offset, offset + 5);
