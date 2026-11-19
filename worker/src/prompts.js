@@ -129,7 +129,7 @@ function outputRules() {
     '28. If exactly one PSV is identifiable in the document but its tag is unreadable, return the remaining supported fields and leave tag_psv null. The application may separately flag a filename-based candidate for human verification; do not fabricate a tag in the AI response.'
   ];
 
-  return rules.join('\\n');
+  return rules.join('\n');
 }
 
 // ============================================================
