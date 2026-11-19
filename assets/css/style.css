@@ -82,14 +82,18 @@ input:focus,select:focus{outline:3px solid #1769aa20;border-color:#3987bd}
 .footer-watermark span{color:#94a3af;margin-left:4px}
 
 
-/* Enforce one fixed sidebar order on every page, regardless of active link */
+/* Enforce one fixed sidebar order on every page, regardless of active link.
+   Every navigation item has an explicit order so BV/BVV links cannot float
+   ahead of Dashboard or change position when the active page changes. */
 .sidebar nav{display:grid;grid-template-columns:minmax(0,1fr)}
 .sidebar nav a[href="dashboard.html"]{order:1}
 .sidebar nav a[href="extraction.html"]{order:2}
-.sidebar nav a[href="multi-document.html"]{order:3}
-.sidebar nav a[href="mapping.html"]{order:4}
-.sidebar nav a[href="review.html"]{order:5}
-
+.sidebar nav a[href="bvv-extraction.html"]{order:3}
+.sidebar nav a[href="multi-document.html"]{order:4}
+.sidebar nav a[href="mapping.html"]{order:5}
+.sidebar nav a[href="bvv-mapping.html"]{order:6}
+.sidebar nav a[href="review.html"]{order:7}
+.sidebar nav a[href="bvv-review.html"]{order:8}
 
 /* Keep Worker URL settings visible on every workspace page */
 .sidebar-bottom{
