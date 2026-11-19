@@ -119,7 +119,14 @@ function outputRules() {
     '18. Keep Orifice Area fields in AJ:AL and Capacity fields in AM:AN. Do not shift these fields into adjacent columns.',
     '19. COMPLETENESS IS CRITICAL: inspect every supplied source row, not only the first, last, or most complete rows. Do not skip a row because some cells are blank or its information is repeated elsewhere. Preserve every distinct PSV record present in the batch.',
     '20. For spreadsheet input, return one record for EVERY source row that contains a distinct Tag PSV value. Copy that Tag PSV exactly and include its source row number in _source_location. Do not merge two rows with different Tag PSV values. If a row is a continuation of the same PSV and has no Tag PSV, merge its facts into that same PSV record only when the association is unambiguous.',
-    '21. Before returning JSON, compare the returned records against all Tag PSV values in the supplied rows. Ensure none are missing and ensure no tag has been silently dropped. Use null for unavailable fields, but never omit an identifiable PSV record merely because some fields are missing.'
+    '21. Before returning JSON, compare the returned records against all Tag PSV values in the supplied rows. Ensure none are missing and ensure no tag has been silently dropped. Use null for unavailable fields, but never omit an identifiable PSV record merely because some fields are missing.',
+    '22. PDF / IMAGE COMPLETENESS: inspect every page, including attachments, schedules and technical data pages. A certificate cover page and its attachment usually describe the SAME PSV; combine their fields into one record when the Tag PSV / Item No. identifies the same valve. Do not create a second record for the attachment of the same certificate.',
+    '23. PRIORITY OF IDENTIFIERS: in certificates, look specifically for “Nomor Item”, “Item No.”, “Tag No.”, “Tag PSV”, “PSV Tag”, “Nomor P&ID”, and equipment tag fields. Do not mistake certificate number, serial number, datasheet number, or protected-equipment item number for Tag PSV.',
+    '24. EQUIPMENT PROTECTED: extract the protected equipment description/type, its own item number, fluid, design/operating temperature, and design/operating pressure ONLY from the EQUIPMENT PROTECTED / DATA PERALATAN YANG DILINDUNGI section. Do not confuse protected-equipment item number with the PSV tag.',
+    '25. PSV TESTING: distinguish Setting Pressure, Back Pressure, Pop Test / Cold Differential Test Pressure, and Leak Test Pressure. Preserve the value and unit as printed. Do not copy a testing value into PSV design pressure, MAWP, or operating pressure unless the source labels it accordingly.',
+    '26. DATE DISTINCTION: “Tanggal Pemeriksaan Keselamatan” is the actual safety inspection date for columns L and M. “Date of Inspection” / “Tanggal Inspeksi” elsewhere is a separate inspection date and must not be substituted without clear equivalence.',
+    '27. FILE NAME IS SECONDARY EVIDENCE: use the supplied filename only to cross-check the document identity. If the document itself contains a readable Tag PSV / Nomor Item, use the document value. Never use a certificate number, serial number, protected-equipment item number, or unrelated filename text as the Tag PSV.',
+    '28. If exactly one PSV is identifiable in the document but its tag is unreadable, return the remaining supported fields and leave tag_psv null. The application may separately flag a filename-based candidate for human verification; do not fabricate a tag in the AI response.'
   ];
 
   return rules.join('\\n');
@@ -129,10 +136,11 @@ function outputRules() {
 // PDF / IMAGE EXTRACTION PROMPT
 // ============================================================
 
-export function buildExtractionPrompt(mapping = {}) {
+export function buildExtractionPrompt(mapping = {}, fileName = '') {
   return [
     'You are an industrial engineering data extraction assistant preparing a DTP PSV asset register.',
-    'Read the attached PDF/image and map every visible equipment fact to the target template fields below.',
+    'Read EVERY page of the attached PDF/image. Treat all pages as one source document and extract every distinct PSV record supported by the document.',
+    fileName ? `SOURCE FILE NAME (context only; do not treat as proof when document content conflicts): ${String(fileName).slice(0, 240)}` : '',
     'TARGET FIELDS:',
     schemaText(),
     mappingText(mapping),
