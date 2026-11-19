@@ -44,6 +44,18 @@ function filenameTagCandidate(fileName) {
   return name.replace(/\s+/g, ' ').trim();
 }
 // Split combined BV/BVV "Model / Ukuran" strings into the workbook's separate fields.
+function normalizeBvvYearAndUsed(record) {
+  const output = { ...record };
+  // Example: "1994/1994" under "Tahun Dibuat / Digunakan"
+  // means Built=1994 and Used=1994, not a date.
+  const combined = String(output.year_built ?? '').trim().match(/^(\\d{4})\\s*\\/\\s*(\\d{4})$/);
+  if (combined) {
+    output.year_built = combined[1];
+    if (!String(output.used ?? '').trim()) output.used = combined[2];
+  }
+  return output;
+}
+
 function normalizeBvvModelAndSize(record) {
   const output = { ...record };
   const modelText = String(output.model ?? '').trim();
@@ -138,7 +150,7 @@ export default {
             for (const [key] of BVV_FIELDS) output[key] = record?.[key] ?? null;
             output._source_location = record?._source_location ?? null;
             output._confidence = Number.isFinite(Number(record?._confidence)) ? Math.max(0, Math.min(1, Number(record._confidence))) : 0.5;
-            return normalizeBvvModelAndSize(output);
+            return normalizeBvvModelAndSize(normalizeBvvYearAndUsed(output));
           });
           return json(request, { ok: true, records, provider: 'gemini', model: result._model_used || model });
         }
