@@ -43,6 +43,27 @@ function filenameTagCandidate(fileName) {
   if (!/^(?:BV|PSV)[-_ ]/i.test(name) || (name.match(/\d/g) || []).length < 2) return null;
   return name.replace(/\s+/g, ' ').trim();
 }
+// Split combined BV/BVV "Model / Ukuran" strings into the workbook's separate fields.
+function normalizeBvvModelAndSize(record) {
+  const output = { ...record };
+  const modelText = String(output.model ?? '').trim();
+  if (!modelText) return output;
+
+  // Example: 2010-51/8"#150 -> model=2010-51, size=8", rating=#150.
+  // Require an inch marker to avoid splitting ordinary model numbers or fractions.
+  const combined = modelText.match(/^(.+?)\\s*\\/\\s*(\\d+(?:\\s*[- ]\\s*\\d+\\s*\\/\\s*\\d+)?\\s*(?:["″”]|inch(?:es)?|in\\b))\\s*(#\\s*\\d+|class\\s*\\d+)?\\s*$/i);
+  if (!combined) return output;
+
+  const parsedModel = combined[1].trim();
+  const parsedSize = combined[2].trim().replace(/[″”]/g, '"').replace(/\\s+/g, ' ');
+  const parsedRating = combined[3] ? combined[3].replace(/\\s+/g, '').replace(/^class/i, '#') : null;
+
+  output.model = parsedModel;
+  if (!String(output.bvv_size_inch ?? '').trim()) output.bvv_size_inch = parsedSize;
+  if (!String(output.bvv_rating ?? '').trim() && parsedRating) output.bvv_rating = parsedRating;
+  return output;
+}
+
 function normalizeRecords(records, fileName = '') {
   if (!Array.isArray(records)) throw new Error('AI response does not contain a records array.');
   const candidateTag = records.length === 1 ? filenameTagCandidate(fileName) : null;
@@ -117,7 +138,7 @@ export default {
             for (const [key] of BVV_FIELDS) output[key] = record?.[key] ?? null;
             output._source_location = record?._source_location ?? null;
             output._confidence = Number.isFinite(Number(record?._confidence)) ? Math.max(0, Math.min(1, Number(record._confidence))) : 0.5;
-            return output;
+            return normalizeBvvModelAndSize(output);
           });
           return json(request, { ok: true, records, provider: 'gemini', model: result._model_used || model });
         }
@@ -151,7 +172,7 @@ export default {
           for (const [key] of BVV_FIELDS) output[key] = record?.[key] ?? null;
           output._source_location = record?._source_location ?? null;
           output._confidence = Number.isFinite(Number(record?._confidence)) ? Math.max(0, Math.min(1, Number(record._confidence))) : 0.5;
-          return output;
+          return normalizeBvvModelAndSize(output);
         });
         return json(request, { ok: true, records, provider: 'gemini', model: result._model_used || model });
       }
