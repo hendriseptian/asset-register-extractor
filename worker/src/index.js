@@ -37,12 +37,25 @@ function parseMapping(value) {
   }
 }
 
-function normalizeRecords(records) {
+function filenameTagCandidate(fileName) {
+  const name = String(fileName || '').split(/[\\/]/).pop().replace(/\\.[^.]+$/, '').trim();
+  // Only accept an explicit PSV/BV-style filename, never certificate or serial-number filenames.
+  if (!/^(?:BV|PSV)[-_ ]/i.test(name) || (name.match(/\\d/g) || []).length < 2) return null;
+  return name.replace(/\\s+/g, ' ').trim();
+}
+
+function normalizeRecords(records, fileName = '') {
   if (!Array.isArray(records)) throw new Error('AI response does not contain a records array.');
+  const candidateTag = records.length === 1 ? filenameTagCandidate(fileName) : null;
   return records.map((record) => {
     const output = {};
     for (const [key] of PSV_FIELDS) output[key] = record?.[key] ?? null;
     output._source_location = record?._source_location ?? null;
+    if ((!output.tag_psv || !String(output.tag_psv).trim()) && candidateTag) {
+      output.tag_psv = candidateTag;
+      output._tag_source = 'filename_candidate';
+      output._source_location = [output._source_location, `Tag PSV candidate recovered from filename: ${fileName} (verify against source document)`].filter(Boolean).join(' | ');
+    }
     const confidence = Number(record?._confidence);
     output._confidence = Number.isFinite(confidence) ? Math.max(0, Math.min(1, confidence)) : 0.5;
     return output;
@@ -93,9 +106,9 @@ export default {
           model,
           mimeType,
           base64: btoa(binary),
-          prompt: buildExtractionPrompt(parseMapping(form.get('mapping')))
+          prompt: buildExtractionPrompt(parseMapping(form.get('mapping')), file.name)
         });
-        return json(request, { ok: true, records: normalizeRecords(result.records), provider: 'gemini', model: result._model_used || model });
+        return json(request, { ok: true, records: normalizeRecords(result.records, file.name), provider: 'gemini', model: result._model_used || model });
       }
 
       const body = await request.json();
