@@ -46,12 +46,18 @@ function filenameTagCandidate(fileName) {
 // Split combined BV/BVV "Model / Ukuran" strings into the workbook's separate fields.
 function normalizeBvvYearAndUsed(record) {
   const output = { ...record };
-  // Example: "1994/1994" under "Tahun Dibuat / Digunakan"
-  // means Built=1994 and Used=1994, not a date.
-  const combined = String(output.year_built ?? '').trim().match(/^(\d{4})\s*\/\s*(\d{4})$/);
-  if (combined) {
-    output.year_built = combined[1];
-    if (!String(output.used ?? '').trim()) output.used = combined[2];
+  // Example: "1994/1994" under "Tahun Dibuat / Digunakan".
+  // Split without a regular expression to avoid escaping/build-parser issues.
+  const value = String(output.year_built ?? '').trim();
+  const parts = value.split('/');
+  if (parts.length === 2) {
+    const built = parts[0].trim();
+    const used = parts[1].trim();
+    const isFourDigitYear = (year) => year.length === 4 && year.split('').every((ch) => ch >= '0' && ch <= '9');
+    if (isFourDigitYear(built) && isFourDigitYear(used)) {
+      output.year_built = built;
+      if (!String(output.used ?? '').trim()) output.used = used;
+    }
   }
   return output;
 }
