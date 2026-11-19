@@ -38,12 +38,11 @@ function parseMapping(value) {
 }
 
 function filenameTagCandidate(fileName) {
-  const name = String(fileName || '').split(/[\\/]/).pop().replace(/\\.[^.]+$/, '').trim();
+  const name = String(fileName || '').split(/[\\/]/).pop().replace(/\.[^.]+$/, '').trim();
   // Only accept an explicit PSV/BV-style filename, never certificate or serial-number filenames.
-  if (!/^(?:BV|PSV)[-_ ]/i.test(name) || (name.match(/\\d/g) || []).length < 2) return null;
-  return name.replace(/\\s+/g, ' ').trim();
+  if (!/^(?:BV|PSV)[-_ ]/i.test(name) || (name.match(/\d/g) || []).length < 2) return null;
+  return name.replace(/\s+/g, ' ').trim();
 }
-
 function normalizeRecords(records, fileName = '') {
   if (!Array.isArray(records)) throw new Error('AI response does not contain a records array.');
   const candidateTag = records.length === 1 ? filenameTagCandidate(fileName) : null;
