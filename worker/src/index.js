@@ -1,4 +1,4 @@
-import { buildExtractionPrompt, buildTableMappingPrompt, PSV_FIELDS } from './prompts.js';
+import { buildExtractionPrompt, buildTableMappingPrompt, PSV_FIELDS, buildBvvExtractionPrompt, buildBvvTableMappingPrompt, BVV_FIELDS } from './prompts.js';
 import { extractWithGemini, mapTableWithGemini } from './gemini.js';
 
 const ALLOWED_ORIGINS = new Set([
@@ -78,7 +78,7 @@ export default {
       });
     }
 
-    if (!['/api/extract/document', '/api/extract/table'].includes(url.pathname)) {
+    if (!['/api/extract/document', '/api/extract/table', '/api/extract/bvv-document', '/api/extract/bvv-table'].includes(url.pathname)) {
       return json(request, { error: 'Not found' }, 404);
     }
     if (request.method !== 'POST') return json(request, { error: 'Method not allowed' }, 405);
@@ -86,7 +86,7 @@ export default {
 
     const model = env.GEMINI_MODEL || MODEL_DEFAULT;
     try {
-      if (url.pathname === '/api/extract/document') {
+      if (url.pathname === '/api/extract/document' || url.pathname === '/api/extract/bvv-document') {
         const form = await request.formData();
         const file = form.get('file');
         if (!file || typeof file.arrayBuffer !== 'function') {
@@ -107,8 +107,20 @@ export default {
           model,
           mimeType,
           base64: btoa(binary),
-          prompt: buildExtractionPrompt(parseMapping(form.get('mapping')), file.name)
+          prompt: url.pathname === '/api/extract/bvv-document'
+            ? buildBvvExtractionPrompt(parseMapping(form.get('mapping')), file.name)
+            : buildExtractionPrompt(parseMapping(form.get('mapping')), file.name)
         });
+        if (url.pathname === '/api/extract/bvv-document') {
+          const records = result.records.map((record) => {
+            const output = {};
+            for (const [key] of BVV_FIELDS) output[key] = record?.[key] ?? null;
+            output._source_location = record?._source_location ?? null;
+            output._confidence = Number.isFinite(Number(record?._confidence)) ? Math.max(0, Math.min(1, Number(record._confidence))) : 0.5;
+            return output;
+          });
+          return json(request, { ok: true, records, provider: 'gemini', model: result._model_used || model });
+        }
         return json(request, { ok: true, records: normalizeRecords(result.records, file.name), provider: 'gemini', model: result._model_used || model });
       }
 
@@ -121,10 +133,11 @@ export default {
       }
       if (!body.rows.length) return json(request, { ok: true, records: [], provider: 'gemini', model });
 
+      const isBvvTable = url.pathname === '/api/extract/bvv-table';
       const result = await mapTableWithGemini({
         apiKey: env.GEMINI_API_KEY,
         model,
-        prompt: buildTableMappingPrompt({
+        prompt: (isBvvTable ? buildBvvTableMappingPrompt : buildTableMappingPrompt)({
           fileName: String(body.file_name || 'client.xlsx').slice(0, 200),
           sheetName: String(body.sheet_name || 'Sheet1').slice(0, 100),
           headers: body.headers,
@@ -132,6 +145,16 @@ export default {
           mapping: parseMapping(JSON.stringify(body.mapping || {}))
         })
       });
+      if (isBvvTable) {
+        const records = result.records.map((record) => {
+          const output = {};
+          for (const [key] of BVV_FIELDS) output[key] = record?.[key] ?? null;
+          output._source_location = record?._source_location ?? null;
+          output._confidence = Number.isFinite(Number(record?._confidence)) ? Math.max(0, Math.min(1, Number(record._confidence))) : 0.5;
+          return output;
+        });
+        return json(request, { ok: true, records, provider: 'gemini', model: result._model_used || model });
+      }
       return json(request, { ok: true, records: normalizeRecords(result.records), provider: 'gemini', model: result._model_used || model });
     } catch (error) {
       return json(request, { error: error?.message || 'Extraction failed.' }, 502);
