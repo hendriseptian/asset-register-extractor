@@ -116,7 +116,10 @@ function outputRules() {
     '15. SIZE: Column N contains only the actual inlet size x outlet size from the current scanned source. Any example format is illustrative only, never a default. Preserve exact sizes and fractions; do not invent missing sides.',
     '16. RATING: Column S contains only the actual inlet flange rating x outlet flange rating, including # signs. Any example rating is illustrative only, never a default or allowed-value restriction. Preserve asymmetric ratings and do not invent missing values.',
     '17. If combined size/rating appears in Model / Ukuran, use it to populate columns N and S separately while retaining the full model string in Model. Where supported, also populate individual inlet and outlet sizes/ratings.',
-    '18. Keep Orifice Area fields in AJ:AL and Capacity fields in AM:AN. Do not shift these fields into adjacent columns.'
+    '18. Keep Orifice Area fields in AJ:AL and Capacity fields in AM:AN. Do not shift these fields into adjacent columns.',
+    '19. COMPLETENESS IS CRITICAL: inspect every supplied source row, not only the first, last, or most complete rows. Do not skip a row because some cells are blank or its information is repeated elsewhere. Preserve every distinct PSV record present in the batch.',
+    '20. For spreadsheet input, return one record for EVERY source row that contains a distinct Tag PSV value. Copy that Tag PSV exactly and include its source row number in _source_location. Do not merge two rows with different Tag PSV values. If a row is a continuation of the same PSV and has no Tag PSV, merge its facts into that same PSV record only when the association is unambiguous.',
+    '21. Before returning JSON, compare the returned records against all Tag PSV values in the supplied rows. Ensure none are missing and ensure no tag has been silently dropped. Use null for unavailable fields, but never omit an identifiable PSV record merely because some fields are missing.'
   ];
 
   return rules.join('\\n');
