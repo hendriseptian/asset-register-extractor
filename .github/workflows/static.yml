@@ -37,6 +37,8 @@ jobs:
           mkdir -p _site
           cp index.html _site/
           cp dashboard.html _site/
+          cp psv-dashboard.html _site/
+          cp bvv-dashboard.html _site/
           cp extraction.html _site/
           cp multi-document.html _site/
           cp mapping.html _site/
