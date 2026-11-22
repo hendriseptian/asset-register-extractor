@@ -264,7 +264,7 @@
         ${fields.map((field) => `<tr><td><b>${field.column}</b></td><td>${escapeHtml(field.label)}</td><td class="alias-list">${escapeHtml(field.aliases.join(', ') || 'Automatic sequence')}</td>
         <td><input data-field="${field.key}" value="${escapeHtml(savedAliases[field.key] || '')}" placeholder="Additional terms, comma-separated" ${field.auto ? 'disabled' : ''}></td></tr>`).join('')}
         </tbody></table></div></section>`;
-    }).join('') + '<div class="notice">40 physical columns A–AN from the latest DTP workbook. Fluid for protected equipment is mapped separately in column AE. Column A (No.) is generated automatically; records start at row 5.</div>';
+    }).join('') + '<div class="notice">39 physical columns A–AM from the latest DTP workbook. Fluid for protected equipment is mapped separately in column AD. Column A (No.) is generated automatically; records start at row 5.</div>';
     $('save-mapping').addEventListener('click', () => {
       const aliases = {};
       host.querySelectorAll('input[data-field]').forEach((inputElement) => {
@@ -327,7 +327,7 @@
         return `<tr class="${needsReview ? 'needs-review' : ''}">${cells}
           <td>${Math.round(Number(record._confidence ?? 0.5) * 100)}%</td><td>${escapeHtml(record._source_file || '')}</td><td>${escapeHtml(record._source_location || '')}</td><td>${(record._merge_conflicts || []).map((conflict) => escapeHtml(conflict.field + ': kept [' + conflict.kept_value + '] vs [' + conflict.other_value + '] from ' + conflict.source_file)).join('<br>') || '—'}</td></tr>`;
       }).join('');
-      host.innerHTML = `<div class="review-help">Edit values directly before export. Preview follows the Excel template's grouped headers and column order (A:AN). Scroll horizontally to inspect all 40 template columns. AI confidence and source references are review metadata, not Excel columns.</div>
+      host.innerHTML = `<div class="review-help">Edit values directly before export. Preview follows the Excel template's grouped headers and column order (A:AM). Scroll horizontally to inspect all 39 template columns. AI confidence and source references are review metadata, not Excel columns.</div>
         <table class="review-table"><thead><tr class="group-header-row">${groupHeaders}</tr><tr class="field-header-row">${fieldHeaders}</tr></thead><tbody>${rows}</tbody></table>`;
       host.querySelectorAll('input[data-row]').forEach((inputElement) => {
         inputElement.addEventListener('change', () => {
