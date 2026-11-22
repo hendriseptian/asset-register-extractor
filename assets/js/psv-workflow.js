@@ -22,6 +22,7 @@
     const explicitTags = new Set(input.map((record) => normalizeTag(record.tag_psv)).filter(Boolean));
     const output = [];
     const byTag = new Map();
+    const untaggedFragments = [];
     let merged = 0;
 
     const appendUnique = (current, incoming) => {
@@ -78,10 +79,9 @@
         return;
       }
 
-      // One explicit tag across all uploaded documents means untagged pages
-      // belong to that single identified asset. Keep all differences visible as conflicts.
+      // Hold untagged fragments until all explicit tags are known and consolidated.
       if (explicitTags.size === 1) {
-        mergeInto(byTag.get([...explicitTags][0]) || (byTag.set([...explicitTags][0], { tag_psv: input.find((item) => normalizeTag(item.tag_psv))?.tag_psv || '' }), byTag.get([...explicitTags][0])), source);
+        untaggedFragments.push(source);
         merged++;
         return;
       }
@@ -94,6 +94,12 @@
         output.push({ ...source, _merge_conflicts: [...(source._merge_conflicts || [])] });
       }
     });
+
+    if (explicitTags.size === 1) {
+      const soleTag = [...explicitTags][0];
+      const target = byTag.get(soleTag);
+      if (target) untaggedFragments.forEach((fragment) => mergeInto(target, fragment));
+    }
 
     return { records: output, merged };
   }
