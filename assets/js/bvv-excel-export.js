@@ -16,25 +16,25 @@ document.addEventListener('DOMContentLoaded', () => {
   };
   button.addEventListener('click', async () => {
     const rows = records();
-    if (!rows.length) { notify('Tidak ada record untuk diekspor.', 'error'); return; }
+    if (!rows.length) { notify('There are no records to export.', 'error'); return; }
     button.disabled = true;
-    button.textContent = 'Menyiapkan Excel…';
+    button.textContent = 'Preparing Excel…';
     try {
       const response = await fetch(schema.templateFile, { cache: 'no-store' });
-      if (!response.ok) throw new Error('Template DTP_BVV_Asset_Register.xlsx baru tidak ditemukan. Pastikan deployment GitHub Pages sudah selesai.');
+      if (!response.ok) throw new Error('The latest DTP_BVV_Asset_Register.xlsx template could not be found. Make sure the GitHub Pages deployment has completed.');
       const workbook = new ExcelJS.Workbook();
       await workbook.xlsx.load(await response.arrayBuffer());
       const worksheet = workbook.getWorksheet(schema.worksheet) || workbook.worksheets[0];
-      if (!worksheet) throw new Error(`Worksheet ${schema.worksheet} tidak ditemukan.`);
+      if (!worksheet) throw new Error(`Worksheet ${schema.worksheet} was not found.`);
       if (worksheet.columnCount !== schema.totalTemplateColumns) {
-        throw new Error(`Struktur template tidak sesuai: ditemukan ${worksheet.columnCount} kolom, seharusnya ${schema.totalTemplateColumns} (A:AM). Export dibatalkan.`);
+        throw new Error(`Template structure mismatch: found ${worksheet.columnCount} columns; expected ${schema.totalTemplateColumns} (A:AE). Export cancelled.`);
       }
       const originalMerges = [...worksheet.model.merges].sort();
       if (Number.isInteger(schema.expectedMergedRanges) && originalMerges.length !== schema.expectedMergedRanges) {
-        throw new Error(`Struktur merged cells template berubah: ditemukan ${originalMerges.length}, seharusnya ${schema.expectedMergedRanges}. Export dibatalkan.`);
+        throw new Error(`The template's merged-cell structure has changed: found ${originalMerges.length}; expected ${schema.expectedMergedRanges}. Export cancelled.`);
       }
       if (worksheet.getRow(schema.firstDataRow).number !== schema.firstDataRow) {
-        throw new Error('Baris awal data tidak valid.');
+        throw new Error('The first data row is invalid.');
       }
       const firstDataRow = schema.firstDataRow;
       rows.forEach((record, index) => {
@@ -52,7 +52,7 @@ document.addEventListener('DOMContentLoaded', () => {
         targetRow.height = 22;
       });
       if (JSON.stringify([...worksheet.model.merges].sort()) !== JSON.stringify(originalMerges)) {
-        throw new Error('Merged header cells berubah. Export dibatalkan.');
+        throw new Error('Merged header cells have changed. Export cancelled.');
       }
       const buffer = await workbook.xlsx.writeBuffer();
       const blob = new Blob([buffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
@@ -66,10 +66,10 @@ document.addEventListener('DOMContentLoaded', () => {
       anchor.remove();
       setTimeout(() => URL.revokeObjectURL(objectUrl), 2000);
       const missingTags = rows.filter((record) => !String(record.tag_bvv || '').trim()).length;
-      notify(`Excel berhasil diunduh: ${rows.length} record ditulis mulai baris ${firstDataRow}. Template BV/BVV 31 kolom (A:AE), tanpa kolom Date Built, 4 baris header; seluruh merged headers dan formatting template dipertahankan. Tidak ada kolom konversi tekanan pada format ini.${missingTags ? ` Perhatian: ${missingTags} record belum memiliki Tag BVV.` : ''} Verifikasi seluruh data terhadap dokumen sumber sebelum digunakan.`, 'success');
+      notify(`Excel file downloaded successfully: ${rows.length} record(s) written starting at row ${firstDataRow}. The 31-column BV/BVV template (A:AE), without the Date Built column and with 4 header rows, was used; all merged headers and template formatting have been preserved. This format does not include pressure-conversion columns.${missingTags ? ` Warning: ${missingTags} record(s) are missing a Tag BVV.` : ''} Verify all data against the source documents before use.`, 'success');
     } catch (error) {
       console.error(error);
-      notify(`Export gagal: ${error.message}`, 'error');
+      notify(`Export failed: ${error.message}`, 'error');
     } finally {
       button.disabled = false;
       button.textContent = 'Export DTP Excel';
