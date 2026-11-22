@@ -105,7 +105,7 @@
   }
   const getFiles = () => readJson('are_files', []);
   async function hashFile(file) {
-    if (!globalThis.crypto?.subtle) throw new Error('Browser tidak mendukung pemeriksaan duplikasi file. Gunakan HTTPS atau browser terbaru.');
+    if (!globalThis.crypto?.subtle) throw new Error('Your browser does not support duplicate-file detection. Please use HTTPS and an up-to-date browser.');
     const bytes = await file.arrayBuffer();
     const digest = await crypto.subtle.digest('SHA-256', bytes);
     return Array.from(new Uint8Array(digest), (byte) => byte.toString(16).padStart(2, '0')).join('');
@@ -126,7 +126,7 @@
   };
   const getWorkerUrl = () => {
     const url = (localStorage.getItem('are_worker_url') || '').trim().replace(/\/$/, '');
-    if (!/^https:\/\//i.test(url)) throw new Error('Cloudflare Worker URL belum dikonfigurasi. Buka Settings / Worker URL.');
+    if (!/^https:\/\//i.test(url)) throw new Error('Cloudflare Worker URL is not configured. Open Settings / Worker URL.');
     return url;
   };
   const dataFields = schema.fields.filter((field) => !field.auto);
@@ -287,7 +287,7 @@
           freshFiles.push({ file, hash });
         }
         if (!freshFiles.length) {
-          showNotice(status, `Tidak ada ekstraksi baru. ${skippedDuplicates.length} file sudah pernah diproses. Preview lama tetap dipertahankan dan kuota AI tidak digunakan.`, 'success');
+          showNotice(status, `No new files to process. ${skippedDuplicates.length} file(s) have already been processed. Existing review data has been preserved, and no AI quota was used.`, 'success');
           return;
         }
         for (let index = 0; index < freshFiles.length; index++) {
@@ -297,10 +297,10 @@
             let records;
             if (['xlsx', 'xls', 'csv'].includes(extension)) records = await processSpreadsheet(file, workerUrl);
             else if (['pdf', 'png', 'jpg', 'jpeg', 'webp'].includes(extension)) records = await processDocument(file, workerUrl);
-            else throw new Error('Format tidak didukung. Gunakan XLSX, XLS, CSV, PDF, PNG, JPG atau WEBP.');
+            else throw new Error('Unsupported file format. Use XLSX, XLS, CSV, PDF, PNG, JPG, or WEBP.');
             newRecords.push(...records);
             metadata.push({ name: file.name, size: file.size, type: extension, hash, processed_at: new Date().toISOString() });
-            showNotice(status, `Diproses ${index + 1}/${freshFiles.length}: ${file.name} — ${records.length} record ditemukan.`);
+            showNotice(status, `Processing ${index + 1}/${freshFiles.length}: ${file.name} — ${records.length} record(s) found.`);
           } catch (error) { errors.push(`${file.name}: ${error.message}`); }
         }
         if (newRecords.length) saveRecords(getRecords().concat(newRecords));
@@ -310,9 +310,9 @@
           const known = new Set(registry.map((entry) => entry.hash));
           localStorage.setItem('are_processed_files', JSON.stringify(registry.concat(metadata.filter((entry) => !known.has(entry.hash)))));
         }
-        const skippedMessage = skippedDuplicates.length ? ` ${skippedDuplicates.length} file duplikat dilewati tanpa memakai kuota AI.` : '';
-        if (errors.length) showNotice(status, `Sebagian file gagal diproses:\n${errors.join('\n')}\n${newRecords.length} record baru berhasil diekstrak.${skippedMessage}`, 'error');
-        else showNotice(status, `Selesai. ${newRecords.length} record baru berhasil diekstrak.${skippedMessage} Preview sebelumnya tetap dipertahankan. Lanjutkan ke Data Review.`, 'success');
+        const skippedMessage = skippedDuplicates.length ? ` ${skippedDuplicates.length} duplicate file(s) skipped without using AI quota.` : '';
+        if (errors.length) showNotice(status, `Some files could not be processed:\n${errors.join('\n')}\n${newRecords.length} new record(s) extracted successfully.${skippedMessage}`, 'error');
+        else showNotice(status, `Completed. ${newRecords.length} new record(s) extracted successfully.${skippedMessage} Previous review data has been preserved. Continue to Data Review.`, 'success');
       } catch (error) { showNotice(status, error.message, 'error'); }
       finally { extractButton.disabled = selectedFiles.length === 0; clearButton.disabled = false; }
     });
@@ -337,12 +337,12 @@
         if (inputElement.value.trim()) aliases[inputElement.dataset.field] = inputElement.value.trim();
       });
       localStorage.setItem('are_mapping', JSON.stringify(aliases));
-      showNotice($('mapping-status'), 'Alias tambahan disimpan. Gemini akan menggunakannya sebagai petunjuk mapping.', 'success');
+      showNotice($('mapping-status'), 'Additional field aliases saved. Gemini will use them as mapping hints.', 'success');
     });
     $('reset-mapping').addEventListener('click', () => {
       localStorage.removeItem('are_mapping');
       host.querySelectorAll('input[data-field]').forEach((element) => { element.value = ''; });
-      showNotice($('mapping-status'), 'Alias tambahan dihapus. Alias bawaan tetap digunakan.', 'success');
+      showNotice($('mapping-status'), 'Additional field aliases cleared. Default aliases will remain active.', 'success');
     });
   }
 
@@ -369,7 +369,7 @@
 
     const renderReviewTable = () => {
       if (!records.length) {
-        host.innerHTML = '<p class="muted">Belum ada record. Upload dokumen client melalui menu New Extraction.</p>';
+        host.innerHTML = '<p class="muted">No records yet. Upload client documents from the New Extraction page.</p>';
         return;
       }
       const visibleFields = schema.fields;
@@ -393,7 +393,7 @@
           return `<td><input data-row="${rowIndex}" data-field="${field.key}" value="${escapeHtml(record[field.key] ?? '')}" title="${escapeHtml(field.label)} · ${field.column}"></td>`;
         }).join('');
         return `<tr class="${needsReview ? 'needs-review' : ''}">${cells}
-          <td>${Math.round(Number(record._confidence ?? 0.5) * 100)}%</td><td>${escapeHtml(record._source_file || '')}</td><td>${escapeHtml(record._source_location || '')}</td><td>${(record._merge_conflicts || []).map((conflict) => escapeHtml(conflict.field + ': kept [' + conflict.kept_value + '] vs [' + conflict.other_value + '] from ' + conflict.source_file)).join('<br>') || '—'}</td><td><button type="button" class="btn secondary review-delete" data-delete-row="${rowIndex}" title="Hapus record ini">Delete</button></td></tr>`;
+          <td>${Math.round(Number(record._confidence ?? 0.5) * 100)}%</td><td>${escapeHtml(record._source_file || '')}</td><td>${escapeHtml(record._source_location || '')}</td><td>${(record._merge_conflicts || []).map((conflict) => escapeHtml(conflict.field + ': kept [' + conflict.kept_value + '] vs [' + conflict.other_value + '] from ' + conflict.source_file)).join('<br>') || '—'}</td><td><button type="button" class="btn secondary review-delete" data-delete-row="${rowIndex}" title="Delete this record">Delete</button></td></tr>`;
       }).join('');
       host.innerHTML = `<div class="review-help">Edit values directly before export. Preview follows the Excel template's grouped headers and column order (A:AM). Scroll horizontally to inspect all 39 template columns. AI confidence and source references are review metadata, not Excel columns. Use Delete to remove an unwanted record before export.</div>
         <table class="review-table"><thead><tr class="group-header-row">${groupHeaders}</tr><tr class="field-header-row">${fieldHeaders}</tr></thead><tbody>${rows}</tbody></table>`;
@@ -409,13 +409,13 @@
         button.addEventListener('click', () => {
           const index = Number(button.dataset.deleteRow);
           const record = records[index];
-          const tag = String(record?.tag_psv || '').trim() || 'tanpa Tag PSV';
-          if (!window.confirm(`Hapus record ${tag} dari hasil review? Tindakan ini tidak dapat dibatalkan.`)) return;
+          const tag = String(record?.tag_psv || '').trim() || 'without a Tag PSV';
+          if (!window.confirm(`Delete record ${tag} from the review results? This action cannot be undone.`)) return;
           records.splice(index, 1);
           saveRecords(records);
           renderSummary();
           renderReviewTable();
-          showNotice(status, `Record ${tag} berhasil dihapus dari hasil review.`, 'success');
+          showNotice(status, `Record ${tag} has been removed from the review results.`, 'success');
         });
       });
     };
@@ -424,7 +424,7 @@
 
     const clearButton = $('clear-review-btn');
     clearButton?.addEventListener('click', () => {
-      if (!window.confirm('Kosongkan seluruh hasil ekstraksi dan daftar file pada sesi ini? Field aliases dan Worker URL tidak akan dihapus.')) return;
+      if (!window.confirm('Clear all extraction results and uploaded-file records from this session? Field aliases and the Worker URL will not be affected.')) return;
       sessionStorage.removeItem('are_records');
       sessionStorage.removeItem('are_files');
       location.reload();
