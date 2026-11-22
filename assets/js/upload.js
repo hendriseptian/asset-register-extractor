@@ -3,7 +3,7 @@ document.addEventListener('DOMContentLoaded',()=>{
   let selected=[];
   const render=()=>{list.innerHTML=selected.map((f,i)=>`<div class="file-row"><span>${ARE.escape(f.name)} <small class="muted">(${(f.size/1024).toFixed(1)} KB)</small></span><button data-remove="${i}" class="text-link">Remove</button></div>`).join('');run.disabled=!selected.length};
   const add=files=>{selected=[...selected,...Array.from(files)].filter((f,i,a)=>a.findIndex(x=>x.name===f.name&&x.size===f.size)===i);render()};
-  const worker=()=>{const u=ARE.getWorkerUrl();if(!u)throw new Error('Cloudflare Worker URL belum dikonfigurasi. Buka Settings / Worker URL.');return u};
+  const worker=()=>{const u=ARE.getWorkerUrl();if(!u)throw new Error('Cloudflare Worker URL is not configured. Open Settings / Worker URL.');return u};
   const mapping=()=>ARE.getFieldMapping();
   async function postTable(url,fileName,sheet,rows){
     const response=await fetch(url+'/api/extract/table',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({file_name:fileName,sheet_name:sheet.name,headers:sheet.headers,rows,mapping:mapping()})});
@@ -11,7 +11,7 @@ document.addEventListener('DOMContentLoaded',()=>{
     return (data.records||[]).map(record=>({...record,_source_file:fileName,_source_location:record._source_location||`${sheet.name} · source rows ${rows[0]?.rowNumber||'?'}–${rows[rows.length-1]?.rowNumber||'?'}`}));
   }
   async function processSpreadsheet(file,url){
-    const sheets=await window.AREExcel.read(file);if(!sheets.length)throw new Error('Tidak ditemukan tabel berisi data pada workbook.');
+    const sheets=await window.AREExcel.read(file);if(!sheets.length)throw new Error('No data table was found in the workbook.');
     const out=[];
     for(const sheet of sheets){
       // Small batches keep prompts within free-tier token limits and preserve source row references.
@@ -37,7 +37,7 @@ document.addEventListener('DOMContentLoaded',()=>{
   clear.addEventListener('click',()=>{selected=[];input.value='';render();status.hidden=true});
   run.addEventListener('click',async()=>{
     let records=ARE.getRecords();const fileMeta=[],errors=[];run.disabled=true;clear.disabled=true;
-    ARE.notify(status,'Memproses dokumen. File spreadsheet akan dibaca di browser lalu dipetakan oleh Gemini…');
+    ARE.notify(status,'Processing documents. Spreadsheet files will be read in your browser and mapped by Gemini…');
     try{
       const url=worker();
       for(let i=0;i<selected.length;i++){
@@ -47,14 +47,14 @@ document.addEventListener('DOMContentLoaded',()=>{
           let extracted=[];
           if(['xlsx','xls','csv'].includes(ext))extracted=await processSpreadsheet(file,url);
           else if(['pdf','png','jpg','jpeg','webp'].includes(ext))extracted=await processDocument(file,url);
-          else throw new Error('Format file tidak didukung: '+ext);
+          else throw new Error('Unsupported file format: '+ext);
           records.push(...extracted);
-          ARE.notify(status,`Memproses ${i+1}/${selected.length}: ${file.name} — ${extracted.length} record ditemukan.`);
+          ARE.notify(status,`Processing ${i+1}/${selected.length}: ${file.name} — ${extracted.length} record(s) found.`);
         }catch(err){console.error(err);errors.push(`${file.name}: ${err.message}`)}
       }
       ARE.setRecords(records);ARE.setFiles([...ARE.getFiles(),...fileMeta]);
-      if(errors.length)ARE.notify(status,`Selesai dengan ${errors.length} file bermasalah. ${records.length} record tersedia.\n${errors.join('\n')}`,'error');
-      else ARE.notify(status,`Selesai. ${records.length} record tersedia. Lanjutkan ke Field Mapping untuk memeriksa alias, lalu Data Review.`,'success');
+      if(errors.length)ARE.notify(status,`Completed with ${errors.length} file(s) requiring attention. ${records.length} record(s) are available.\n${errors.join('\n')}`,'error');
+      else ARE.notify(status,`Completed. ${records.length} record(s) are available. Continue to Field Mapping to review aliases, then proceed to Data Review.`,'success');
     }catch(err){ARE.notify(status,err.message,'error')}
     finally{run.disabled=!selected.length;clear.disabled=false}
   });
