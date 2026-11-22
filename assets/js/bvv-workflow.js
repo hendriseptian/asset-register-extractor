@@ -11,7 +11,21 @@
     catch { return fallback; }
   };
   const getRecords = () => readJson('are_bvv_records', []);
-  const saveRecords = (records) => sessionStorage.setItem('are_bvv_records', JSON.stringify(records));
+  function cleanModelValue(value) {
+    const model = String(value ?? '').trim();
+    // Remove a slash-delimited nominal-size suffix (e.g. "JO-35-E / 30\" x 30\"").
+    // Require an inch marker so ordinary model identifiers containing "/" stay intact.
+    const sizeSuffix = /\\s*\\/\\s*(?=(?:\\d+\\s+)?\\d+(?:\\s*\\/\\s*\\d+)?\\s*(?:["″]|in(?:ch)?\\b))/i;
+    const match = sizeSuffix.exec(model);
+    if (!match) return model;
+    const prefix = model.slice(0, match.index).trim();
+    return prefix || '-';
+  }
+  const normalizeModelRecords = (records) => records.map((record) => ({
+    ...record,
+    model: cleanModelValue(record.model)
+  }));
+  const saveRecords = (records) => sessionStorage.setItem('are_bvv_records', JSON.stringify(normalizeModelRecords(records)));
 
   // Gemini can occasionally return a continuation row with no Tag BVV (for example,
   // a date on the next row). Fold sparse continuation rows into the preceding tagged asset.
@@ -21,6 +35,9 @@
     let splitCount = 0;
     input = input.map((record) => {
       const normalized = { ...record };
+      const originalModel = String(normalized.model ?? '').trim();
+      normalized.model = cleanModelValue(normalized.model);
+      if (normalized.model !== originalModel) splitCount++;
       const built = String(normalized.year_built ?? '').trim();
       const used = String(normalized.used ?? '').trim();
       const pair = built.match(/^(\d{4})\s*(?:\/|–|—|-)\s*(\d{4})$/);
