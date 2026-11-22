@@ -17,6 +17,20 @@
   // If the entire upload set contains exactly one explicit Tag PSV, untagged
   // fragments are treated as supporting pages for that asset, not new assets.
   function consolidateContinuationRows(input) {
+    // Separate paired Year Built / Used values when Gemini places both in one field.
+    // Only split an exact two-year pair and only when the Used field is empty.
+    input = input.map((record) => {
+      const normalized = { ...record };
+      const built = String(normalized.year_built ?? '').trim();
+      const used = String(normalized.used ?? '').trim();
+      const pair = built.match(/^(\d{4})\s*(?:\/|–|—|-)\s*(\d{4})$/);
+      if (pair && !used) {
+        normalized.year_built = pair[1];
+        normalized.used = pair[2];
+        normalized._year_fields_split = true;
+      }
+      return normalized;
+    });
     const fields = schema.fields.filter((field) => !field.auto);
     const normalizeTag = (value) => String(value || '').trim().toUpperCase().replace(/\s+/g, '');
     const explicitTags = new Set(input.map((record) => normalizeTag(record.tag_psv)).filter(Boolean));
