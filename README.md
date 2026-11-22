@@ -1,4 +1,4 @@
-# Asset Register Extractor — DTP PSV & PV
+# MECHASSET — Mechanical Asset Management Platform
 
 A browser-based engineering data extraction workflow that reads client Excel/CSV, PDF and image documents, maps source information to the 39 AI-populated fields in the DTP PSV & PV workbook, supports manual review, and exports into the original Excel template.
 
