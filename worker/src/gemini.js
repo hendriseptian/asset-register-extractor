@@ -14,7 +14,7 @@ function stripTrailingCommas(value) {
     if (inString) {
       output += char;
       if (escaped) escaped = false;
-      else if (char === '\\\\') escaped = true;
+      else if (char === '\\') escaped = true;
       else if (char === '"') inString = false;
       continue;
     }
@@ -25,7 +25,7 @@ function stripTrailingCommas(value) {
     }
     if (char === ',') {
       let next = index + 1;
-      while (next < value.length && /\\s/.test(value[next])) next++;
+      while (next < value.length && /\s/.test(value[next])) next++;
       if (value[next] === '}' || value[next] === ']') continue;
     }
     output += char;
@@ -43,7 +43,7 @@ function firstCompleteJsonObject(value) {
     const char = value[index];
     if (inString) {
       if (escaped) escaped = false;
-      else if (char === '\\\\') escaped = true;
+      else if (char === '\\') escaped = true;
       else if (char === '"') inString = false;
       continue;
     }
@@ -58,8 +58,8 @@ function firstCompleteJsonObject(value) {
 }
 
 function parseGeminiJson(output) {
-  const text = String(output || '').replace(/^\\uFEFF/, '').trim();
-  const unfenced = text.replace(/^\`\`\`(?:json)?\\s*/i, '').replace(/\\s*\`\`\`$/, '').trim();
+  const text = String(output || '').replace(/^\uFEFF/, '').trim();
+  const unfenced = text.replace(/^```(?:json)?\s*/i, '').replace(/\s*```$/, '').trim();
   const object = firstCompleteJsonObject(unfenced);
   const candidates = [...new Set([unfenced, object].filter(Boolean))];
   let lastError;
@@ -179,7 +179,7 @@ function strictJsonRetryParts(parts) {
   ].join(' ');
   const retryParts = [...parts];
   const firstText = retryParts.findIndex((part) => typeof part.text === 'string');
-  if (firstText >= 0) retryParts[firstText] = { text: `${retryParts[firstText].text}\\n\\n${retryInstruction}` };
+  if (firstText >= 0) retryParts[firstText] = { text: `${retryParts[firstText].text}\n\n${retryInstruction}` };
   else retryParts.unshift({ text: retryInstruction });
   return retryParts;
 }
