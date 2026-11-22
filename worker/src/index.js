@@ -2,10 +2,9 @@ import { buildExtractionPrompt, buildTableMappingPrompt, PSV_FIELDS, buildBvvExt
 import { extractWithGemini, mapTableWithGemini } from './gemini.js';
 
 
-const ALLOWED_ORIGINS = new Set([
-  'https://hendriseptian.github.io',
-  'https://hendriseptian35.github.io',
-  'https://hendengineering.github.io',
+// Allow GitHub Pages user sites automatically (https://<username>.github.io).
+// Keep local development origins explicit; do not reflect arbitrary Origin values.
+const LOCAL_DEVELOPMENT_ORIGINS = new Set([
   'http://localhost:5500',
   'http://127.0.0.1:5500'
 ]);
@@ -14,15 +13,44 @@ const MAX_DOCUMENT_BYTES = 10 * 1024 * 1024;
 const MAX_TABLE_BYTES = 90 * 1024;
 const MODEL_DEFAULT = 'gemini-3.5-flash-lite';
 
+function getAllowedOrigin(request) {
+  const origin = request.headers.get('Origin');
+  if (!origin) return null;
+
+  if (LOCAL_DEVELOPMENT_ORIGINS.has(origin)) return origin;
+
+  try {
+    const parsed = new URL(origin);
+    const isCanonicalHttpsOrigin =
+      parsed.protocol === 'https:' &&
+      parsed.origin === origin &&
+      !parsed.username &&
+      !parsed.password;
+
+    // GitHub Pages account sites use exactly one account label before github.io.
+    // Example: https://hendriseptian.github.io
+    const isGitHubPagesOrigin =
+      isCanonicalHttpsOrigin &&
+      /^[a-z0-9](?:[a-z0-9-]*[a-z0-9])?\\.github\\.io$/i.test(parsed.hostname);
+
+    return isGitHubPagesOrigin ? origin : null;
+  } catch {
+    return null;
+  }
+}
+
 function cors(request) {
-  const origin = request.headers.get('Origin') || '';
-  return {
-    'Access-Control-Allow-Origin': ALLOWED_ORIGINS.has(origin) ? origin : 'https://hendriseptian.github.io',
+  const headers = {
     'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
     'Access-Control-Allow-Headers': 'Content-Type, Authorization',
     'Access-Control-Max-Age': '86400',
     'Vary': 'Origin'
   };
+
+  const allowedOrigin = getAllowedOrigin(request);
+  if (allowedOrigin) headers['Access-Control-Allow-Origin'] = allowedOrigin;
+
+  return headers;
 }
 
 function json(request, data, status = 200) {
