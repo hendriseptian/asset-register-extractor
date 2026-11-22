@@ -39,7 +39,7 @@
   }
   const getFiles = () => readJson('are_bvv_files', []);
   async function hashFile(file) {
-    if (!globalThis.crypto?.subtle) throw new Error('Browser tidak mendukung pemeriksaan duplikasi file. Gunakan HTTPS atau browser terbaru.');
+    if (!globalThis.crypto?.subtle) throw new Error('Your browser does not support duplicate-file detection. Please use HTTPS and an up-to-date browser.');
     const bytes = await file.arrayBuffer();
     const digest = await crypto.subtle.digest('SHA-256', bytes);
     return Array.from(new Uint8Array(digest), (byte) => byte.toString(16).padStart(2, '0')).join('');
@@ -60,7 +60,7 @@
   };
   const getWorkerUrl = () => {
     const url = (localStorage.getItem('are_worker_url') || '').trim().replace(/\/$/, '');
-    if (!/^https:\/\//i.test(url)) throw new Error('Cloudflare Worker URL belum dikonfigurasi. Buka Settings / Worker URL.');
+    if (!/^https:\/\//i.test(url)) throw new Error('Cloudflare Worker URL is not configured. Open Settings / Worker URL.');
     return url;
   };
   const dataFields = schema.fields.filter((field) => !field.auto);
@@ -221,7 +221,7 @@
           freshFiles.push({ file, hash });
         }
         if (!freshFiles.length) {
-          showNotice(status, `Tidak ada ekstraksi baru. ${skippedDuplicates.length} file sudah pernah diproses. Preview lama tetap dipertahankan dan kuota AI tidak digunakan.`, 'success');
+          showNotice(status, `No new files to process. ${skippedDuplicates.length} file(s) have already been processed. Existing review data has been preserved, and no AI quota was used.`, 'success');
           return;
         }
         for (let index = 0; index < freshFiles.length; index++) {
@@ -231,10 +231,10 @@
             let records;
             if (['xlsx', 'xls', 'csv'].includes(extension)) records = await processSpreadsheet(file, workerUrl);
             else if (['pdf', 'png', 'jpg', 'jpeg', 'webp'].includes(extension)) records = await processDocument(file, workerUrl);
-            else throw new Error('Format tidak didukung. Gunakan XLSX, XLS, CSV, PDF, PNG, JPG atau WEBP.');
+            else throw new Error('Unsupported file format. Use XLSX, XLS, CSV, PDF, PNG, JPG, or WEBP.');
             newRecords.push(...records);
             metadata.push({ name: file.name, size: file.size, type: extension, hash, processed_at: new Date().toISOString() });
-            showNotice(status, `Diproses ${index + 1}/${freshFiles.length}: ${file.name} — ${records.length} record ditemukan.`);
+            showNotice(status, `Processing ${index + 1}/${freshFiles.length}: ${file.name} — ${records.length} record(s) found.`);
           } catch (error) { errors.push(`${file.name}: ${error.message}`); }
         }
         if (newRecords.length) saveRecords(getRecords().concat(newRecords));
@@ -244,9 +244,9 @@
           const known = new Set(registry.map((entry) => entry.hash));
           localStorage.setItem('are_bvv_processed_files', JSON.stringify(registry.concat(metadata.filter((entry) => !known.has(entry.hash)))));
         }
-        const skippedMessage = skippedDuplicates.length ? ` ${skippedDuplicates.length} file duplikat dilewati tanpa memakai kuota AI.` : '';
-        if (errors.length) showNotice(status, `Sebagian file gagal diproses:\n${errors.join('\n')}\n${newRecords.length} record baru berhasil diekstrak.${skippedMessage}`, 'error');
-        else showNotice(status, `Selesai. ${newRecords.length} record baru berhasil diekstrak.${skippedMessage} Preview sebelumnya tetap dipertahankan. Lanjutkan ke Data Review.`, 'success');
+        const skippedMessage = skippedDuplicates.length ? ` ${skippedDuplicates.length} duplicate file(s) skipped without using AI quota.` : '';
+        if (errors.length) showNotice(status, `Some files could not be processed:\n${errors.join('\n')}\n${newRecords.length} new record(s) extracted successfully.${skippedMessage}`, 'error');
+        else showNotice(status, `Completed. ${newRecords.length} new record(s) extracted successfully.${skippedMessage} Previous review data has been preserved. Continue to Data Review.`, 'success');
       } catch (error) { showNotice(status, error.message, 'error'); }
       finally { extractButton.disabled = selectedFiles.length === 0; clearButton.disabled = false; }
     });
@@ -271,12 +271,12 @@
         if (inputElement.value.trim()) aliases[inputElement.dataset.field] = inputElement.value.trim();
       });
       localStorage.setItem('are_bvv_mapping', JSON.stringify(aliases));
-      showNotice($('mapping-status'), 'Alias tambahan disimpan. Gemini akan menggunakannya sebagai petunjuk mapping.', 'success');
+      showNotice($('mapping-status'), 'Additional field aliases saved. Gemini will use them as mapping hints.', 'success');
     });
     $('reset-mapping').addEventListener('click', () => {
       localStorage.removeItem('are_bvv_mapping');
       host.querySelectorAll('input[data-field]').forEach((element) => { element.value = ''; });
-      showNotice($('mapping-status'), 'Alias tambahan dihapus. Alias bawaan tetap digunakan.', 'success');
+      showNotice($('mapping-status'), 'Additional field aliases cleared. Default aliases will remain active.', 'success');
     });
   }
 
@@ -302,7 +302,7 @@
     };
 
     if (!records.length) {
-      host.innerHTML = '<p class="muted">Belum ada record. Upload dokumen client melalui menu New Extraction.</p>';
+      host.innerHTML = '<p class="muted">No records yet. Upload client documents from the New Extraction page.</p>';
     } else {
       const visibleFields = schema.fields;
       const grouped = [];
@@ -342,7 +342,7 @@
 
     const clearButton = $('clear-review-btn');
     clearButton?.addEventListener('click', () => {
-      if (!window.confirm('Kosongkan seluruh hasil ekstraksi dan daftar file pada sesi ini? Field aliases dan Worker URL tidak akan dihapus.')) return;
+      if (!window.confirm('Clear all extraction results and uploaded-file records from this session? Field aliases and the Worker URL will not be affected.')) return;
       sessionStorage.removeItem('are_bvv_records');
       sessionStorage.removeItem('are_bvv_files');
       location.reload();
