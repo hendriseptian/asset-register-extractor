@@ -38,6 +38,22 @@ The exporter loads the actual `.xlsx` template and writes data rows into it. It 
 6. Use **Data Review** to edit all extracted values, inspect confidence and source file/location, and correct missing or duplicate tags.
 7. Click **Export DTP Excel** to download a copy of the original template populated from row 5.
 
+## Gemini response reliability
+
+The Worker uses a defensive JSON response pipeline for both PSV and BVV/PVV extraction:
+
+- Requests JSON-only output with temperature 0 and an expanded output-token budget.
+- Removes Markdown fences and safely extracts the first complete JSON object if the model adds surrounding text.
+- Repairs only safe trailing commas outside quoted strings; it does not guess or rewrite extracted field values.
+- Validates that the response contains a top-level `records` array.
+- If JSON is malformed, the Worker retries once with the same source document and a stricter JSON-only recovery instruction.
+- Transient Gemini HTTP errors are retried, with the configured fallback model used where applicable.
+- If the retry still fails, the file is reported as failed while successful files in the same upload batch remain saved.
+
+This reduces avoidable failures caused by malformed model output, but cannot guarantee success for every file. Gemini quota limits, service outages, safety blocks, unsupported/poor-quality scans, oversized documents, and output truncation can still require a manual retry or splitting the source PDF. Always review extracted values against the original document.
+
+**Deployment note:** changes under `worker/` must be deployed to Cloudflare Workers separately from GitHub Pages. After updating this repository, deploy from the `worker` directory using Wrangler (or the connected Cloudflare Worker build pipeline).
+
 ## Multi-document consolidation
 
 Open **Multi-Document Upload** to submit multiple supporting documents for one or more PSV assets.
