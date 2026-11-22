@@ -13,28 +13,88 @@
   const getRecords = () => readJson('are_records', []);
   const saveRecords = (records) => sessionStorage.setItem('are_records', JSON.stringify(records));
 
-  // Gemini can occasionally return a continuation row with no Tag PSV (for example,
-  // a date on the next row). Fold sparse continuation rows into the preceding tagged asset.
+  // Consolidate repeated document fragments into one asset record.
+  // If the entire upload set contains exactly one explicit Tag PSV, untagged
+  // fragments are treated as supporting pages for that asset, not new assets.
   function consolidateContinuationRows(input) {
     const fields = schema.fields.filter((field) => !field.auto);
+    const normalizeTag = (value) => String(value || '').trim().toUpperCase().replace(/\\s+/g, '');
+    const explicitTags = new Set(input.map((record) => normalizeTag(record.tag_psv)).filter(Boolean));
     const output = [];
+    const byTag = new Map();
     let merged = 0;
-    input.forEach((record) => {
-      const tag = String(record.tag_psv || '').trim();
-      if (tag) { output.push({ ...record }); return; }
+
+    const appendUnique = (current, incoming) => {
+      const values = [current, incoming].filter(Boolean).flatMap((value) => String(value).split(';').map((part) => part.trim()).filter(Boolean));
+      return [...new Set(values)].join('; ');
+    };
+
+    const mergeInto = (target, source) => {
+      fields.forEach((field) => {
+        const incoming = source[field.key];
+        if (incoming == null || String(incoming).trim() === '') return;
+        const current = target[field.key];
+        if (current == null || String(current).trim() === '') {
+          target[field.key] = incoming;
+        } else if (String(current).trim() !== String(incoming).trim()) {
+          target._merge_conflicts = Array.isArray(target._merge_conflicts) ? target._merge_conflicts : [];
+          target._merge_conflicts.push({
+            field: field.label, key: field.key,
+            kept_value: String(current), other_value: String(incoming),
+            source_file: source._source_file || 'Unknown source',
+            source_location: source._source_location || ''
+          });
+        }
+      });
+      target._source_file = appendUnique(target._source_file, source._source_file);
+      target._source_location = appendUnique(target._source_location, source._source_location);
+      if (Array.isArray(source._merge_conflicts)) {
+        target._merge_conflicts = [...(target._merge_conflicts || []), ...source._merge_conflicts];
+      }
+      const confidences = [target._confidence, source._confidence].map(Number).filter(Number.isFinite);
+      if (confidences.length) target._confidence = Math.min(...confidences);
+    };
+
+    input.forEach((source) => {
+      const tag = normalizeTag(source.tag_psv);
       const populated = fields.filter((field) =>
-        record[field.key] != null && String(record[field.key]).trim() !== '');
+        source[field.key] != null && String(source[field.key]).trim() !== '');
+
+      if (tag) {
+        if (byTag.has(tag)) {
+          mergeInto(byTag.get(tag), source);
+          merged++;
+        } else {
+          const record = { ...source, _merge_conflicts: [...(source._merge_conflicts || [])] };
+          byTag.set(tag, record);
+          output.push(record);
+        }
+        return;
+      }
+
+      // Empty AI rows carry no asset data and should not become blank export rows.
+      if (!populated.length) {
+        merged++;
+        return;
+      }
+
+      // One explicit tag across all uploaded documents means untagged pages
+      // belong to that single identified asset. Keep all differences visible as conflicts.
+      if (explicitTags.size === 1) {
+        mergeInto(byTag.get([...explicitTags][0]) || (byTag.set([...explicitTags][0], { tag_psv: input.find((item) => normalizeTag(item.tag_psv))?.tag_psv || '' }), byTag.get([...explicitTags][0])), source);
+        merged++;
+        return;
+      }
+
       const previous = output.length ? output[output.length - 1] : null;
-      if (previous && String(previous.tag_psv || '').trim() && populated.length <= 2) {
-        populated.forEach((field) => {
-          const current = previous[field.key];
-          if (current == null || String(current).trim() === '') previous[field.key] = record[field.key];
-        });
+      if (previous && normalizeTag(previous.tag_psv) && populated.length <= 2) {
+        mergeInto(previous, source);
         merged++;
       } else {
-        output.push({ ...record });
+        output.push({ ...source, _merge_conflicts: [...(source._merge_conflicts || [])] });
       }
     });
+
     return { records: output, merged };
   }
   const getFiles = () => readJson('are_files', []);
@@ -301,9 +361,11 @@
       ].map((label) => `<span class="summary-chip">${escapeHtml(label)}</span>`).join('');
     };
 
-    if (!records.length) {
-      host.innerHTML = '<p class="muted">Belum ada record. Upload dokumen client melalui menu New Extraction.</p>';
-    } else {
+    const renderReviewTable = () => {
+      if (!records.length) {
+        host.innerHTML = '<p class="muted">Belum ada record. Upload dokumen client melalui menu New Extraction.</p>';
+        return;
+      }
       const visibleFields = schema.fields;
       const grouped = [];
       visibleFields.forEach((field) => {
@@ -314,10 +376,10 @@
       });
       const groupHeaders = grouped.map((group) =>
         `<th class="group-header" colspan="${group.fields.length}">${escapeHtml(group.group)}</th>`
-      ).join('') + '<th class="group-header review-meta-group" colspan="4">Review Metadata</th>';
+      ).join('') + '<th class="group-header review-meta-group" colspan="5">Review Metadata & Actions</th>';
       const fieldHeaders = visibleFields.map((field) =>
         `<th class="field-header" title="Template column ${field.column}">${field.column} · ${escapeHtml(field.label)}</th>`
-      ).join('') + '<th class="field-header">AI Confidence</th><th class="field-header">Source File</th><th class="field-header">Source Location</th><th class="field-header">Merge Conflicts</th>';
+      ).join('') + '<th class="field-header">AI Confidence</th><th class="field-header">Source File</th><th class="field-header">Source Location</th><th class="field-header">Merge Conflicts</th><th class="field-header">Actions</th>';
       const rows = records.map((record, rowIndex) => {
         const needsReview = Number(record._confidence ?? 0.5) < 0.7 || !String(record.tag_psv || '').trim();
         const cells = visibleFields.map((field) => {
@@ -325,9 +387,9 @@
           return `<td><input data-row="${rowIndex}" data-field="${field.key}" value="${escapeHtml(record[field.key] ?? '')}" title="${escapeHtml(field.label)} · ${field.column}"></td>`;
         }).join('');
         return `<tr class="${needsReview ? 'needs-review' : ''}">${cells}
-          <td>${Math.round(Number(record._confidence ?? 0.5) * 100)}%</td><td>${escapeHtml(record._source_file || '')}</td><td>${escapeHtml(record._source_location || '')}</td><td>${(record._merge_conflicts || []).map((conflict) => escapeHtml(conflict.field + ': kept [' + conflict.kept_value + '] vs [' + conflict.other_value + '] from ' + conflict.source_file)).join('<br>') || '—'}</td></tr>`;
+          <td>${Math.round(Number(record._confidence ?? 0.5) * 100)}%</td><td>${escapeHtml(record._source_file || '')}</td><td>${escapeHtml(record._source_location || '')}</td><td>${(record._merge_conflicts || []).map((conflict) => escapeHtml(conflict.field + ': kept [' + conflict.kept_value + '] vs [' + conflict.other_value + '] from ' + conflict.source_file)).join('<br>') || '—'}</td><td><button type="button" class="btn secondary review-delete" data-delete-row="${rowIndex}" title="Hapus record ini">Delete</button></td></tr>`;
       }).join('');
-      host.innerHTML = `<div class="review-help">Edit values directly before export. Preview follows the Excel template's grouped headers and column order (A:AM). Scroll horizontally to inspect all 39 template columns. AI confidence and source references are review metadata, not Excel columns.</div>
+      host.innerHTML = `<div class="review-help">Edit values directly before export. Preview follows the Excel template's grouped headers and column order (A:AM). Scroll horizontally to inspect all 39 template columns. AI confidence and source references are review metadata, not Excel columns. Use Delete to remove an unwanted record before export.</div>
         <table class="review-table"><thead><tr class="group-header-row">${groupHeaders}</tr><tr class="field-header-row">${fieldHeaders}</tr></thead><tbody>${rows}</tbody></table>`;
       host.querySelectorAll('input[data-row]').forEach((inputElement) => {
         inputElement.addEventListener('change', () => {
@@ -337,7 +399,21 @@
           renderSummary();
         });
       });
-    }
+      host.querySelectorAll('button[data-delete-row]').forEach((button) => {
+        button.addEventListener('click', () => {
+          const index = Number(button.dataset.deleteRow);
+          const record = records[index];
+          const tag = String(record?.tag_psv || '').trim() || 'tanpa Tag PSV';
+          if (!window.confirm(`Hapus record ${tag} dari hasil review? Tindakan ini tidak dapat dibatalkan.`)) return;
+          records.splice(index, 1);
+          saveRecords(records);
+          renderSummary();
+          renderReviewTable();
+          showNotice(status, `Record ${tag} berhasil dihapus dari hasil review.`, 'success');
+        });
+      });
+    };
+    renderReviewTable();
     renderSummary();
 
     const clearButton = $('clear-review-btn');
