@@ -4,6 +4,7 @@ import { extractWithGemini, mapTableWithGemini } from './gemini.js';
 
 const ALLOWED_ORIGINS = new Set([
   'https://hendriseptian.github.io',
+  'https://hendriseptian35.github.io',
   'https://hendengineering.github.io',
   'http://localhost:5500',
   'http://127.0.0.1:5500'
