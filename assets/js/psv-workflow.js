@@ -19,6 +19,7 @@
   function consolidateContinuationRows(input) {
     // Separate paired Year Built / Used values when Gemini places both in one field.
     // Only split an exact two-year pair and only when the Used field is empty.
+    let splitCount = 0;
     input = input.map((record) => {
       const normalized = { ...record };
       const built = String(normalized.year_built ?? '').trim();
@@ -28,6 +29,7 @@
         normalized.year_built = pair[1];
         normalized.used = pair[2];
         normalized._year_fields_split = true;
+        splitCount++;
       }
       return normalized;
     });
@@ -37,7 +39,7 @@
     const output = [];
     const byTag = new Map();
     const untaggedFragments = [];
-    let merged = 0;
+    let merged = splitCount;
 
     const appendUnique = (current, incoming) => {
       const values = [current, incoming].filter(Boolean).flatMap((value) => String(value).split(';').map((part) => part.trim()).filter(Boolean));
