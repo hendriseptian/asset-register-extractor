@@ -1,8 +1,8 @@
 <!DOCTYPE html>
 <html lang="en"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Asset Register Extractor | Equipment Selection</title>
+<title>MECHASSET | Equipment Workspace</title>
 <link rel="stylesheet" href="assets/css/style.css"><link rel="stylesheet" href="assets/css/dashboard.css">
-<link rel="icon" type="image/png" href="assets/favicon.png"><script src="assets/js/theme.js" defer></script>
+<link rel="icon" type="image/png" href="assets/mechasset-logo.svg"><script src="assets/js/theme.js" defer></script>
 <style>
 .selector-shell{min-height:100vh;padding:34px clamp(20px,5vw,76px) 24px;display:flex;flex-direction:column}
 .selector-header{max-width:1120px;width:100%;margin:0 auto 34px;display:flex;justify-content:space-between;align-items:center;gap:20px}
@@ -21,8 +21,8 @@ html[data-theme="dark"] .equipment-icon{background:#203d55;color:#bfe4ff}
 @media(max-width:700px){.equipment-grid{grid-template-columns:1fr}.equipment-card{min-height:230px}.selector-header{align-items:flex-start}}
 </style></head>
 <body><div class="selector-shell">
-<header class="selector-header"><div class="selector-brand"><span class="brand-mark">MI</span><div><b>MECHANICAL INTEGRITY</b><small>Engineering Workspace</small></div></div><a class="text-link" href="index.html">Settings / Worker URL</a></header>
-<main class="selector-main"><section class="selector-intro"><p class="eyebrow">DTP · MECHANICAL INTEGRITY</p><h1>Asset Register Workspace</h1><p>Select the equipment category you want to work on. Each workspace has its own navigation, extraction workflow, field mapping and data review.</p></section>
+<header class="selector-header"><div class="selector-brand"><img class="brand-logo" src="assets/mechasset-logo.svg" alt="MECHASSET logo"><div><b>MECHASSET</b><small>Mechanical Asset Management</small></div></div><a class="text-link" href="index.html">Settings / Worker URL</a></header>
+<main class="selector-main"><section class="selector-intro"><p class="eyebrow">DTP · MECHASSET</p><h1>Asset Register Workspace</h1><p>Select the equipment category you want to work on. Each workspace has its own navigation, extraction workflow, field mapping and data review.</p></section>
 <section class="equipment-grid">
 <a class="equipment-card" href="psv-dashboard.html"><span class="equipment-icon">PSV</span><h2>PSV</h2><p>Pressure Safety Valve asset register. Upload inspection reports, datasheets and certificates, consolidate sources, review extracted fields and export the PSV template.</p><span class="equipment-open">Open PSV workspace →</span></a>
 <a class="equipment-card" href="bvv-dashboard.html"><span class="equipment-icon">BV</span><h2>PVV</h2><p>Breather Valve and Breather/Vacuum Valve register. Extract opening pressure, suction vacuum, inspection details and other PVV fields.</p><span class="equipment-open">Open PVV workspace →</span></a>
