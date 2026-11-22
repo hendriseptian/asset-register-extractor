@@ -18,7 +18,7 @@
   // fragments are treated as supporting pages for that asset, not new assets.
   function consolidateContinuationRows(input) {
     const fields = schema.fields.filter((field) => !field.auto);
-    const normalizeTag = (value) => String(value || '').trim().toUpperCase().replace(/\\s+/g, '');
+    const normalizeTag = (value) => String(value || '').trim().toUpperCase().replace(/\s+/g, '');
     const explicitTags = new Set(input.map((record) => normalizeTag(record.tag_psv)).filter(Boolean));
     const output = [];
     const byTag = new Map();
