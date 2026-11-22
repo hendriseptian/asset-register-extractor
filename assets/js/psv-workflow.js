@@ -15,7 +15,7 @@
     const model = String(value ?? '').trim();
     // Remove a slash-delimited nominal-size suffix (e.g. "JO-35-E / 30\" x 30\"").
     // Require an inch marker so ordinary model identifiers containing "/" stay intact.
-    const sizeSuffix = /\\s*\\/\\s*(?=(?:\\d+\\s+)?\\d+(?:\\s*\\/\\s*\\d+)?\\s*(?:["″]|in(?:ch)?\\b))/i;
+    const sizeSuffix = /\s*\/\s*(?=(?:\d+\s+)?\d+(?:\s*\/\s*\d+)?\s*(?:["″]|in(?:ch)?\b))/i;
     const match = sizeSuffix.exec(model);
     if (!match) return model;
     const prefix = model.slice(0, match.index).trim();
