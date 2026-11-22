@@ -7,13 +7,13 @@
   const readJson = (key, fallback) => { try { return JSON.parse(sessionStorage.getItem(key) || JSON.stringify(fallback)); } catch { return fallback; } };
   const workerUrl = () => {
     const value = (localStorage.getItem('are_worker_url') || '').trim().replace(/\/$/, '');
-    if (!/^https:\/\//i.test(value)) throw new Error('Cloudflare Worker URL belum dikonfigurasi. Buka Settings / Worker URL.');
+    if (!/^https:\/\//i.test(value)) throw new Error('Cloudflare Worker URL is not configured. Open Settings / Worker URL.');
     return value;
   };
   const aliases = () => { try { return JSON.parse(localStorage.getItem('are_mapping') || '{}'); } catch { return {}; } };
   const processedFiles = () => { try { return [...readJson('are_files', []), ...JSON.parse(localStorage.getItem('are_processed_files') || '[]')]; } catch { return readJson('are_files', []); } };
   async function hashFile(file) {
-    if (!globalThis.crypto?.subtle) throw new Error('Browser tidak mendukung pemeriksaan duplikasi file. Gunakan HTTPS atau browser terbaru.');
+    if (!globalThis.crypto?.subtle) throw new Error('Your browser does not support duplicate-file detection. Please use HTTPS and an up-to-date browser.');
     const digest = await crypto.subtle.digest('SHA-256', await file.arrayBuffer());
     return Array.from(new Uint8Array(digest), byte => byte.toString(16).padStart(2, '0')).join('');
   }
@@ -153,7 +153,7 @@
         seenHashes.add(hash);fresh.push({file,hash});
       }
       if(!fresh.length){
-        notice('Tidak ada ekstraksi baru. '+skipped.length+' file sudah pernah diproses. Preview lama tetap dipertahankan dan kuota AI tidak digunakan.','success');
+        notice('No new files to process. '+skipped.length+' file(s) have already been processed. Existing review data has been preserved, and no AI quota was used.','success');
         return;
       }
       for(let i=0;i<fresh.length;i++){
