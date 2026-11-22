@@ -31,7 +31,7 @@ function getAllowedOrigin(request) {
     // Example: https://hendriseptian.github.io
     const isGitHubPagesOrigin =
       isCanonicalHttpsOrigin &&
-      /^[a-z0-9](?:[a-z0-9-]*[a-z0-9])?\\.github\\.io$/i.test(parsed.hostname);
+      /^[a-z0-9](?:[a-z0-9-]*[a-z0-9])?\.github\.io$/i.test(parsed.hostname);
 
     return isGitHubPagesOrigin ? origin : null;
   } catch {
