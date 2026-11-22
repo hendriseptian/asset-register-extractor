@@ -16,6 +16,20 @@
   // Gemini can occasionally return a continuation row with no Tag BVV (for example,
   // a date on the next row). Fold sparse continuation rows into the preceding tagged asset.
   function consolidateContinuationRows(input) {
+    // Separate paired Year Built / Used values when Gemini places both in one field.
+    // Only split an exact two-year pair and only when the Used field is empty.
+    input = input.map((record) => {
+      const normalized = { ...record };
+      const built = String(normalized.year_built ?? '').trim();
+      const used = String(normalized.used ?? '').trim();
+      const pair = built.match(/^(\d{4})\s*(?:\/|–|—|-)\s*(\d{4})$/);
+      if (pair && !used) {
+        normalized.year_built = pair[1];
+        normalized.used = pair[2];
+        normalized._year_fields_split = true;
+      }
+      return normalized;
+    });
     const fields = schema.fields.filter((field) => !field.auto);
     const output = [];
     let merged = 0;
