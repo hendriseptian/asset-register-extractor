@@ -1,11 +1,14 @@
 import { buildExtractionPrompt, buildTableMappingPrompt, PSV_FIELDS, buildBvvExtractionPrompt, buildBvvTableMappingPrompt, BVV_FIELDS } from './prompts.js';
 import { extractWithGemini, mapTableWithGemini } from './gemini.js';
 
+
 const ALLOWED_ORIGINS = new Set([
   'https://hendriseptian.github.io',
+  'https://hendengineering.github.io',
   'http://localhost:5500',
   'http://127.0.0.1:5500'
 ]);
+
 const MAX_DOCUMENT_BYTES = 10 * 1024 * 1024;
 const MAX_TABLE_BYTES = 90 * 1024;
 const MODEL_DEFAULT = 'gemini-3.5-flash-lite';
