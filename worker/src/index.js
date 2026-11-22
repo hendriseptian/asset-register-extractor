@@ -83,6 +83,22 @@ function normalizeBvvModelAndSize(record) {
   return output;
 }
 
+function normalizePsvInspectionDates(record) {
+  const output = { ...record };
+  const dateInW = String(output.date_inspection ?? '').trim();
+  const dateInL = String(output.actual_inspection_date ?? '').trim();
+
+  // W is canonical. If W is empty, retain an existing L value as the best available date.
+  const canonicalDate = dateInW || dateInL;
+  if (canonicalDate) {
+    output.date_inspection = canonicalDate;
+    output.actual_inspection_date = canonicalDate;
+    const year = canonicalDate.match(/\\b\\d{4}\\b/);
+    if (year) output.actual_inspection = year[0];
+  }
+  return output;
+}
+
 function normalizeRecords(records, fileName = '') {
   if (!Array.isArray(records)) throw new Error('AI response does not contain a records array.');
   const candidateTag = records.length === 1 ? filenameTagCandidate(fileName) : null;
@@ -95,6 +111,7 @@ function normalizeRecords(records, fileName = '') {
       output._tag_source = 'filename_candidate';
       output._source_location = [output._source_location, `Tag PSV candidate recovered from filename: ${fileName} (verify against source document)`].filter(Boolean).join(' | ');
     }
+    Object.assign(output, normalizePsvInspectionDates(output));
     const confidence = Number(record?._confidence);
     output._confidence = output._tag_source === 'filename_candidate'
       ? Math.min(0.55, Number.isFinite(confidence) ? Math.max(0, confidence) : 0.5)
