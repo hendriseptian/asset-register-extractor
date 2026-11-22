@@ -93,7 +93,7 @@ function normalizePsvInspectionDates(record) {
   if (canonicalDate) {
     output.date_inspection = canonicalDate;
     output.actual_inspection_date = canonicalDate;
-    const year = canonicalDate.match(/\\b\\d{4}\\b/);
+    const year = canonicalDate.match(/\b\d{4}\b/);
     if (year) output.actual_inspection = year[0];
   }
   return output;
