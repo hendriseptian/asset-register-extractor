@@ -41,7 +41,7 @@ function getAllowedOrigin(request) {
 
 function cors(request) {
   const headers = {
-    'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
+    'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, OPTIONS',
     'Access-Control-Allow-Headers': 'Content-Type, Authorization',
     'Access-Control-Max-Age': '86400',
     'Vary': 'Origin'
@@ -58,6 +58,53 @@ function json(request, data, status = 200) {
     status,
     headers: { ...cors(request), 'Content-Type': 'application/json; charset=utf-8' }
   });
+}
+
+
+// MECHASSET Equipment API helpers. Mutating and read operations require a Worker secret.
+const EQUIPMENT_MODULES = new Set(['PSV', 'BVV', 'PV']);
+const EQUIPMENT_FIELDS = ['tag', 'serial_number', 'equipment_name', 'owner_operator', 'location'];
+const MAX_EQUIPMENT_FIELD_LENGTH = 300;
+
+async function tokenMatches(provided, expected) {
+  if (!provided || !expected) return false;
+  const encoder = new TextEncoder();
+  const [a, b] = await Promise.all([
+    crypto.subtle.digest('SHA-256', encoder.encode(provided)),
+    crypto.subtle.digest('SHA-256', encoder.encode(expected))
+  ]);
+  const left = new Uint8Array(a);
+  const right = new Uint8Array(b);
+  let difference = 0;
+  for (let i = 0; i < left.length; i++) difference |= left[i] ^ right[i];
+  return difference === 0;
+}
+
+async function equipmentApiAuthorized(request, env) {
+  const expected = env.MECHASSET_API_TOKEN;
+  const authorization = request.headers.get('Authorization') || '';
+  const match = authorization.match(/^Bearer\\s+(.+)$/i);
+  return Boolean(expected && match && await tokenMatches(match[1].trim(), expected));
+}
+
+function validateEquipmentPayload(body, requireModule = false) {
+  if (!body || typeof body !== 'object' || Array.isArray(body)) {
+    return 'Request body must be a JSON object.';
+  }
+  if (requireModule && !EQUIPMENT_MODULES.has(String(body.module || '').toUpperCase())) {
+    return 'module must be PSV, BVV, or PV.';
+  }
+  for (const field of EQUIPMENT_FIELDS) {
+    if (body[field] !== undefined && body[field] !== null &&
+        (typeof body[field] !== 'string' || body[field].length > MAX_EQUIPMENT_FIELD_LENGTH)) {
+      return field + ' must be text up to 300 characters.';
+    }
+  }
+  if (body.identity_json !== undefined &&
+      (!body.identity_json || typeof body.identity_json !== 'object' || Array.isArray(body.identity_json))) {
+    return 'identity_json must be a JSON object.';
+  }
+  return null;
 }
 
 function parseMapping(value) {
@@ -190,6 +237,110 @@ export default {
           database: 'query_failed',
           error: 'D1 health query failed.'
         }, 503);
+      }
+    }
+
+    // Equipment CRUD API. No records are exposed unless the caller has the private API token.
+    if (url.pathname === '/api/equipment' || url.pathname.startsWith('/api/equipment/')) {
+      if (!env.DB) return json(request, { error: 'D1 binding DB is not configured.' }, 503);
+      if (!env.MECHASSET_API_TOKEN) return json(request, { error: 'Equipment API authentication is not configured.' }, 503);
+      if (!await equipmentApiAuthorized(request, env)) {
+        return json(request, { error: 'Unauthorized.' }, 401);
+      }
+
+      try {
+        if (url.pathname === '/api/equipment' && request.method === 'GET') {
+          const module = String(url.searchParams.get('module') || '').toUpperCase();
+          const search = String(url.searchParams.get('search') || '').trim().slice(0, 100);
+          if (module && !EQUIPMENT_MODULES.has(module)) {
+            return json(request, { error: 'module must be PSV, BVV, or PV.' }, 400);
+          }
+          let query = 'SELECT id, module, tag, serial_number, equipment_name, owner_operator, location, identity_json, created_at, updated_at FROM equipment';
+          const conditions = [];
+          const values = [];
+          if (module) { conditions.push('module = ?'); values.push(module); }
+          if (search) {
+            conditions.push('(tag LIKE ? OR serial_number LIKE ? OR equipment_name LIKE ?)');
+            const term = '%' + search + '%';
+            values.push(term, term, term);
+          }
+          if (conditions.length) query += ' WHERE ' + conditions.join(' AND ');
+          query += ' ORDER BY updated_at DESC LIMIT 500';
+          const result = await env.DB.prepare(query).bind(...values).all();
+          return json(request, { ok: true, equipment: result.results || [], count: (result.results || []).length });
+        }
+
+        if (url.pathname === '/api/equipment' && request.method === 'POST') {
+          const body = await request.json();
+          const validationError = validateEquipmentPayload(body, true);
+          if (validationError) return json(request, { error: validationError }, 400);
+          const module = String(body.module).toUpperCase();
+          const id = crypto.randomUUID();
+          const identity = JSON.stringify(body.identity_json || {});
+          const values = EQUIPMENT_FIELDS.map((field) => body[field] == null ? null : body[field].trim());
+          await env.DB.prepare(
+            'INSERT INTO equipment (id, module, tag, serial_number, equipment_name, owner_operator, location, identity_json) VALUES (?, ?, ?, ?, ?, ?, ?, ?)'
+          ).bind(id, module, ...values, identity).run();
+          const created = await env.DB.prepare(
+            'SELECT id, module, tag, serial_number, equipment_name, owner_operator, location, identity_json, created_at, updated_at FROM equipment WHERE id = ?'
+          ).bind(id).first();
+          return json(request, { ok: true, equipment: created }, 201);
+        }
+
+        const id = decodeURIComponent(url.pathname.slice('/api/equipment/'.length));
+        if (!id || id.includes('/')) return json(request, { error: 'A valid equipment ID is required.' }, 400);
+
+        if (request.method === 'GET') {
+          const item = await env.DB.prepare(
+            'SELECT id, module, tag, serial_number, equipment_name, owner_operator, location, identity_json, created_at, updated_at FROM equipment WHERE id = ?'
+          ).bind(id).first();
+          return item ? json(request, { ok: true, equipment: item }) : json(request, { error: 'Equipment not found.' }, 404);
+        }
+
+        if (request.method === 'PUT') {
+          const body = await request.json();
+          const validationError = validateEquipmentPayload(body, false);
+          if (validationError) return json(request, { error: validationError }, 400);
+          const existing = await env.DB.prepare('SELECT id FROM equipment WHERE id = ?').bind(id).first();
+          if (!existing) return json(request, { error: 'Equipment not found.' }, 404);
+          const assignments = [];
+          const values = [];
+          for (const field of EQUIPMENT_FIELDS) {
+            if (Object.prototype.hasOwnProperty.call(body, field)) {
+              assignments.push(field + ' = ?');
+              values.push(body[field] == null ? null : body[field].trim());
+            }
+          }
+          if (Object.prototype.hasOwnProperty.call(body, 'module')) {
+            const module = String(body.module || '').toUpperCase();
+            if (!EQUIPMENT_MODULES.has(module)) return json(request, { error: 'module must be PSV, BVV, or PV.' }, 400);
+            assignments.push('module = ?');
+            values.push(module);
+          }
+          if (Object.prototype.hasOwnProperty.call(body, 'identity_json')) {
+            assignments.push('identity_json = ?');
+            values.push(JSON.stringify(body.identity_json));
+          }
+          if (!assignments.length) return json(request, { error: 'No supported fields were provided.' }, 400);
+          assignments.push("updated_at = strftime('%Y-%m-%dT%H:%M:%fZ', 'now')");
+          values.push(id);
+          await env.DB.prepare('UPDATE equipment SET ' + assignments.join(', ') + ' WHERE id = ?').bind(...values).run();
+          const updated = await env.DB.prepare(
+            'SELECT id, module, tag, serial_number, equipment_name, owner_operator, location, identity_json, created_at, updated_at FROM equipment WHERE id = ?'
+          ).bind(id).first();
+          return json(request, { ok: true, equipment: updated });
+        }
+
+        if (request.method === 'DELETE') {
+          const result = await env.DB.prepare('DELETE FROM equipment WHERE id = ?').bind(id).run();
+          if (!result.meta?.changes) return json(request, { error: 'Equipment not found.' }, 404);
+          return json(request, { ok: true, deleted_id: id });
+        }
+
+        return json(request, { error: 'Method not allowed.' }, 405);
+      } catch (error) {
+        if (error instanceof SyntaxError) return json(request, { error: 'Invalid JSON request body.' }, 400);
+        return json(request, { error: 'Equipment API request failed.' }, 500);
       }
     }
 
