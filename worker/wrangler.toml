@@ -2,8 +2,16 @@ name = "asset-register-extractor"
 main = "src/index.js"
 compatibility_date = "2026-11-17"
 
+[[d1_databases]]
+binding = "DB"
+database_name = "mechasset-db"
+database_id = "e21ec79c-948d-49c9-bd2e-321bff41214"
+
 [vars]
 GEMINI_MODEL = "gemini-3.5-flash-lite"
 
 # Keep GEMINI_API_KEY as a Cloudflare Worker secret:
 # npx wrangler secret put GEMINI_API_KEY
+
+# R2 is intentionally not configured yet.
+# Uploaded documents will not be persisted in R2 until the user enables it.
