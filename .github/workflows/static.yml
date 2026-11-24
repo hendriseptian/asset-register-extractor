@@ -1,6 +1,6 @@
 
-# Asset Register Extractor - GitHub Pages Deployment
-name: Deploy Asset Register Extractor
+# MECHASSET - GitHub Pages Deployment
+name: Deploy MECHASSET
 
 on:
   push:
@@ -49,11 +49,15 @@ jobs:
           cp -r assets _site/
           touch _site/.nojekyll
 
+      # Unique per run attempt: prevents duplicate artifact names on reruns.
       - name: Upload website artifact
         uses: actions/upload-pages-artifact@v3
         with:
           path: '_site'
+          name: github-pages-${{ github.run_id }}-${{ github.run_attempt }}
 
       - name: Deploy to GitHub Pages
         id: deployment
         uses: actions/deploy-pages@v5
+        with:
+          artifact_name: github-pages-${{ github.run_id }}-${{ github.run_attempt }}
