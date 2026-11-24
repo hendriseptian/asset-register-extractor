@@ -167,6 +167,32 @@ export default {
       });
     }
 
+    // Read-only D1 connectivity check. Exposes only availability, never stored data.
+    if (url.pathname === '/api/db/health' && request.method === 'GET') {
+      if (!env.DB) {
+        return json(request, { ok: false, database: 'unavailable', error: 'D1 binding DB is not configured.' }, 503);
+      }
+      try {
+        const result = await env.DB.prepare(
+          "SELECT COUNT(*) AS table_count FROM sqlite_master WHERE type = 'table' AND name IN (?, ?, ?, ?, ?)"
+        ).bind('equipment', 'extraction_jobs', 'job_documents', 'processing_batches', 'extracted_records').first();
+
+        const tableCount = Number(result?.table_count || 0);
+        return json(request, {
+          ok: tableCount === 5,
+          database: tableCount === 5 ? 'connected' : 'connected_schema_incomplete',
+          expected_tables: 5,
+          available_tables: tableCount
+        }, tableCount === 5 ? 200 : 503);
+      } catch (error) {
+        return json(request, {
+          ok: false,
+          database: 'query_failed',
+          error: 'D1 health query failed.'
+        }, 503);
+      }
+    }
+
     if (!['/api/extract/document', '/api/extract/table', '/api/extract/bvv-document', '/api/extract/bvv-table'].includes(url.pathname)) {
       return json(request, { error: 'Not found' }, 404);
     }
