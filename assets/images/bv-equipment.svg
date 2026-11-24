@@ -1,0 +1,33 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 520 420" role="img" aria-label="Breather Valve illustration">
+<defs>
+ <linearGradient id="metal" x1="0" y1="0" x2="1" y2="0"><stop stop-color="#68737d"/><stop offset=".2" stop-color="#e5e9ec"/><stop offset=".52" stop-color="#9ba5ad"/><stop offset=".78" stop-color="#f4f6f7"/><stop offset="1" stop-color="#68737d"/></linearGradient>
+ <linearGradient id="top" x1="0" y1="0" x2="0" y2="1"><stop stop-color="#e9edef"/><stop offset="1" stop-color="#7c8790"/></linearGradient>
+ <filter id="shadow"><feGaussianBlur stdDeviation="8"/></filter>
+</defs>
+<ellipse cx="260" cy="375" rx="190" ry="16" fill="#000" opacity=".2" filter="url(#shadow)"/>
+<!-- base flange -->
+<path d="M70 319 L440 319 L474 344 L440 370 L70 370 L38 344Z" fill="url(#top)" stroke="#65717b" stroke-width="3"/>
+<path d="M38 344 L70 319 L440 319 L474 344 L440 357 L70 357Z" fill="#d7dde1" stroke="#65717b" stroke-width="3"/>
+<g fill="#596671"><circle cx="88" cy="340" r="7"/><circle cx="142" cy="331" r="6"/><circle cx="370" cy="331" r="6"/><circle cx="428" cy="340" r="7"/><circle cx="370" cy="357" r="6"/><circle cx="142" cy="357" r="6"/></g>
+<!-- lower pedestal -->
+<path d="M173 269 L347 269 L359 320 L160 320Z" fill="url(#metal)" stroke="#65717b" stroke-width="3"/>
+<!-- valve chamber -->
+<path d="M165 220 Q165 198 190 189 L329 189 Q356 198 356 220 L347 275 L173 275Z" fill="url(#metal)" stroke="#65717b" stroke-width="3"/>
+<path d="M165 222 Q258 246 356 222" fill="none" stroke="#f7f9fa" stroke-width="5" opacity=".65"/>
+<!-- large breather hood -->
+<path d="M85 84 Q85 66 105 60 L269 60 Q289 66 289 84 L289 204 Q289 222 270 228 L105 228 Q85 222 85 204Z" fill="url(#metal)" stroke="#66727c" stroke-width="3"/>
+<path d="M72 83 Q72 58 100 48 L272 48 Q301 58 301 83 L301 105 L72 105Z" fill="url(#top)" stroke="#66727c" stroke-width="3"/>
+<path d="M95 66 L95 203 M279 66 L279 203" stroke="#f8fafb" stroke-width="5" opacity=".45"/>
+<!-- offset vacuum chamber -->
+<path d="M280 177 L429 177 Q454 184 454 207 L454 268 Q454 285 435 292 L300 292 Q281 286 281 268Z" fill="url(#metal)" stroke="#65717b" stroke-width="3"/>
+<path d="M280 177 Q363 194 454 177" fill="none" stroke="#f8fafb" stroke-width="4" opacity=".6"/>
+<!-- top small cap and stem -->
+<path d="M355 177 L355 127 L368 127 L368 177" fill="url(#top)" stroke="#65717b" stroke-width="3"/>
+<path d="M349 127 L374 127 L374 116 L349 116Z" fill="url(#top)" stroke="#65717b" stroke-width="2"/>
+<path d="M367 116 L367 72" stroke="#aeb7be" stroke-width="7" stroke-linecap="round"/>
+<circle cx="367" cy="68" r="7" fill="url(#top)" stroke="#65717b" stroke-width="2"/>
+<!-- lifting eye -->
+<path d="M115 48 L115 30 Q115 17 128 17 L145 17 Q158 17 158 30 L158 48" fill="none" stroke="#aeb8bf" stroke-width="7"/>
+<!-- bolts -->
+<g fill="#66727c" stroke="#e5e9ec" stroke-width="2"><circle cx="108" cy="55" r="6"/><circle cx="266" cy="55" r="6"/><circle cx="315" cy="184" r="5"/><circle cx="428" cy="184" r="5"/></g>
+</svg>
