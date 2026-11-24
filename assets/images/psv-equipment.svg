@@ -1,0 +1,33 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 420 520" role="img" aria-label="Pressure Safety Valve illustration">
+<defs>
+ <linearGradient id="steel" x1="0" y1="0" x2="1" y2="0"><stop stop-color="#7d8790"/><stop offset=".22" stop-color="#e8edf0"/><stop offset=".48" stop-color="#aab3ba"/><stop offset=".72" stop-color="#f5f7f8"/><stop offset="1" stop-color="#77828c"/></linearGradient>
+ <linearGradient id="dark" x1="0" y1="0" x2="1" y2="0"><stop stop-color="#59636d"/><stop offset=".5" stop-color="#c2c9ce"/><stop offset="1" stop-color="#59636d"/></linearGradient>
+ <linearGradient id="flange" x1="0" y1="0" x2="0" y2="1"><stop stop-color="#e6eaed"/><stop offset="1" stop-color="#737e87"/></linearGradient>
+ <filter id="shadow"><feGaussianBlur stdDeviation="8"/></filter>
+</defs>
+<ellipse cx="205" cy="480" rx="132" ry="18" fill="#000" opacity=".22" filter="url(#shadow)"/>
+<!-- lower outlet flange -->
+<path d="M88 398 L294 398 L335 425 L335 452 L294 477 L88 477 L53 451 L53 425Z" fill="url(#flange)" stroke="#64717b" stroke-width="3"/>
+<path d="M53 425 L88 398 L294 398 L335 425 L294 449 L88 449Z" fill="#cbd2d7" stroke="#68747d" stroke-width="3"/>
+<ellipse cx="193" cy="425" rx="67" ry="22" fill="#5f6a73"/><ellipse cx="193" cy="425" rx="43" ry="14" fill="#1b2d3b"/>
+<g fill="#68747d"><circle cx="83" cy="425" r="7"/><circle cx="115" cy="409" r="7"/><circle cx="270" cy="409" r="7"/><circle cx="307" cy="426" r="7"/><circle cx="270" cy="450" r="7"/><circle cx="115" cy="450" r="7"/></g>
+<!-- body bowl -->
+<path d="M125 305 Q125 278 153 263 L245 263 Q274 280 274 306 L260 396 Q251 419 200 421 Q148 419 139 396Z" fill="url(#steel)" stroke="#69747d" stroke-width="3"/>
+<path d="M125 306 Q200 333 274 306" fill="none" stroke="#f7f9fa" stroke-width="5" opacity=".7"/>
+<!-- body neck and bonnet -->
+<path d="M145 266 L151 225 L249 225 L256 266Z" fill="url(#dark)" stroke="#65717b" stroke-width="3"/>
+<path d="M135 224 L265 224 L282 240 L265 256 L135 256 L118 240Z" fill="url(#flange)" stroke="#68747d" stroke-width="3"/>
+<g fill="#69737c"><circle cx="143" cy="239" r="5"/><circle cx="257" cy="239" r="5"/></g>
+<!-- spring bonnet -->
+<path d="M158 105 Q158 91 174 85 L226 85 Q242 91 242 105 L249 224 L151 224Z" fill="url(#steel)" stroke="#65717b" stroke-width="3"/>
+<path d="M172 85 L172 59 Q172 38 189 28 L211 28 Q229 39 229 59 L229 85Z" fill="url(#dark)" stroke="#65717b" stroke-width="3"/>
+<path d="M187 30 Q200 18 213 30" fill="none" stroke="#f8fafb" stroke-width="4"/>
+<!-- bonnet ribs -->
+<path d="M168 110 L168 205 M232 110 L232 205" stroke="#f7f9fa" stroke-width="5" opacity=".45"/>
+<!-- adjustment cap -->
+<path d="M184 18 Q200 4 216 18 L216 31 L184 31Z" fill="url(#flange)" stroke="#65717b" stroke-width="2"/>
+<!-- side lever -->
+<path d="M239 105 Q280 123 284 177 L274 211 Q268 217 263 208 L270 174 Q266 139 239 130Z" fill="url(#dark)" stroke="#626e77" stroke-width="3"/>
+<path d="M158 146 L130 146 L119 159 L130 173 L158 173Z" fill="url(#flange)" stroke="#65717b" stroke-width="3"/>
+<ellipse cx="124" cy="159" rx="8" ry="12" fill="#737e87"/>
+</svg>
