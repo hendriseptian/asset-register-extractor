@@ -83,7 +83,7 @@ async function tokenMatches(provided, expected) {
 async function equipmentApiAuthorized(request, env) {
   const expected = env.MECHASSET_API_TOKEN;
   const authorization = request.headers.get('Authorization') || '';
-  const match = authorization.match(/^Bearer\\s+(.+)$/i);
+  const match = authorization.match(/^Bearer\s+(.+)$/i);
   return Boolean(expected && match && await tokenMatches(match[1].trim(), expected));
 }
 
