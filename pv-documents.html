@@ -6,7 +6,7 @@
 </style></head>
 <body><div class="app-shell">
 <aside class="sidebar"><div class="sidebar-brand"><img class="brand-logo small" src="assets/mechasset-logo.svg" alt="MECHASSET logo"><div><b>MECHASSET</b><small>Mechanical Asset Management</small></div></div>
-<nav><a href="pv-dashboard.html">Dashboard</a><a class="active" href="pv-documents.html">Documents Extraction</a><a href="pv-ut.html?period=previous">Extract Previous UT</a><a href="pv-ut.html?period=last">Extract Last UT</a><a href="#" class="pv-disabled" data-next="Mapping & Review">Mapping &amp; Review</a><a href="#" class="pv-disabled" data-next="PV Asset Register">PV Asset Register</a><a href="pv-export.html">Export Excel</a></nav>
+<nav><a href="pv-dashboard.html">Dashboard</a><a class="active" href="pv-documents.html">Documents Extraction</a><a href="pv-ut.html?period=previous">Extract Previous UT</a><a href="pv-ut.html?period=last">Extract Last UT</a><a href="pv-review.html">Mapping &amp; Review</a><a href="pv-register.html">PV Asset Register</a><a href="pv-export.html">Export Excel</a></nav>
 <div class="sidebar-bottom"><a href="dashboard.html">← Equipment selection</a><a href="equipment.html">Equipment Management</a><a href="index.html">Settings / Worker URL</a></div></aside>
 <main class="main-content"><header class="topbar"><div><p class="eyebrow">MECHASSET · PRESSURE VESSEL</p><h1>Documents Extraction</h1></div><a class="text-link" href="pv-dashboard.html">Back to PV dashboard</a></header>
 <section class="panel"><div class="panel-heading"><div><p class="eyebrow">01 · EQUIPMENT LINK</p><h2>Select Pressure Vessel</h2><p class="muted">Select the registered PV equipment that these source documents belong to.</p></div></div>
@@ -47,7 +47,7 @@
  }
  $('progress-text').textContent='Finished '+done+' of '+files.length+' file(s).';$('extract').disabled=false;
  });
- document.querySelectorAll('[data-next]').forEach(el=>el.addEventListener('click',e=>{e.preventDefault();alert(el.dataset.next+' is planned for the next PV implementation phase.')}));
+ 
  try{results=JSON.parse(sessionStorage.getItem('mechasset_pv_document_results')||'[]')}catch{results=[]}renderResults();
 })();
 </script></body></html>
