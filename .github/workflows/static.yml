@@ -39,6 +39,7 @@ jobs:
           cp pv-documents.html _site/
           cp pv-ut.html _site/
           cp pv-review.html _site/
+          cp pv-register.html _site/
           cp extraction.html _site/
           cp multi-document.html _site/
           cp mapping.html _site/
