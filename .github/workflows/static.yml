@@ -35,6 +35,7 @@ jobs:
           cp equipment.html _site/
           cp psv-dashboard.html _site/
           cp bvv-dashboard.html _site/
+          cp pv-dashboard.html _site/
           cp extraction.html _site/
           cp multi-document.html _site/
           cp mapping.html _site/
