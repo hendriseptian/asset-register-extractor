@@ -1,6 +1,7 @@
 import { buildExtractionPrompt, buildTableMappingPrompt, PSV_FIELDS, buildBvvExtractionPrompt, buildBvvTableMappingPrompt, BVV_FIELDS } from './prompts.js';
 import { extractWithGemini, mapTableWithGemini } from './gemini.js';
 import { buildPvDocumentPrompt } from './pv-prompts.js';
+import { buildPvUtPrompt } from './pv-ut-prompts.js';
 
 
 // Allow GitHub Pages user sites automatically (https://<username>.github.io).
@@ -345,18 +346,18 @@ export default {
       }
     }
 
-    if (!['/api/extract/document', '/api/extract/table', '/api/extract/bvv-document', '/api/extract/bvv-table', '/api/extract/pv-document'].includes(url.pathname)) {
+    if (!['/api/extract/document', '/api/extract/table', '/api/extract/bvv-document', '/api/extract/bvv-table', '/api/extract/pv-document', '/api/extract/pv-previous-ut', '/api/extract/pv-last-ut'].includes(url.pathname)) {
       return json(request, { error: 'Not found' }, 404);
     }
     if (request.method !== 'POST') return json(request, { error: 'Method not allowed' }, 405);
-    if (url.pathname === '/api/extract/pv-document' && !await equipmentApiAuthorized(request, env)) {
+    if ((url.pathname === '/api/extract/pv-document' || url.pathname === '/api/extract/pv-previous-ut' || url.pathname === '/api/extract/pv-last-ut') && !await equipmentApiAuthorized(request, env)) {
       return json(request, { error: 'Unauthorized.' }, 401);
     }
     if (!env.GEMINI_API_KEY) return json(request, { error: 'Gemini API key is not configured' }, 503);
 
     const model = env.GEMINI_MODEL || MODEL_DEFAULT;
     try {
-      if (url.pathname === '/api/extract/document' || url.pathname === '/api/extract/bvv-document' || url.pathname === '/api/extract/pv-document') {
+      if (url.pathname === '/api/extract/document' || url.pathname === '/api/extract/bvv-document' || url.pathname === '/api/extract/pv-document' || url.pathname === '/api/extract/pv-previous-ut' || url.pathname === '/api/extract/pv-last-ut') {
         const form = await request.formData();
         const file = form.get('file');
         if (!file || typeof file.arrayBuffer !== 'function') {
@@ -379,7 +380,13 @@ export default {
           base64: btoa(binary),
           prompt: url.pathname === '/api/extract/bvv-document'
             ? buildBvvExtractionPrompt(parseMapping(form.get('mapping')), file.name)
-            : url.pathname === '/api/extract/pv-document'
+            : (url.pathname === '/api/extract/pv-previous-ut' || url.pathname === '/api/extract/pv-last-ut')
+              ? buildPvUtPrompt(url.pathname === '/api/extract/pv-previous-ut' ? 'previous' : 'last', {
+                  id: String(form.get('equipment_id') || '').slice(0, 100),
+                  tag: String(form.get('equipment_tag') || '').slice(0, 200),
+                  name: String(form.get('equipment_name') || '').slice(0, 200)
+                }, file.name)
+              : url.pathname === '/api/extract/pv-document'
               ? buildPvDocumentPrompt(form.get('document_type'), {
                   id: String(form.get('equipment_id') || '').slice(0, 100),
                   tag: String(form.get('equipment_tag') || '').slice(0, 200),
@@ -387,6 +394,18 @@ export default {
                 }, file.name)
               : buildExtractionPrompt(parseMapping(form.get('mapping')), file.name)
         });
+        if (url.pathname === '/api/extract/pv-previous-ut' || url.pathname === '/api/extract/pv-last-ut') {
+          const keys = ['equipment_tag','report_date','inspection_date','component','measurement_location','measurement_point','thickness_reading','thickness_unit','corrosion_rate','remaining_life','remarks'];
+          const records = (Array.isArray(result.records) ? result.records : []).map((record) => {
+            const output = {};
+            for (const key of keys) output[key] = record?.[key] ?? null;
+            output._source_location = record?._source_location ?? null;
+            const confidence = Number(record?._confidence);
+            output._confidence = Number.isFinite(confidence) ? Math.max(0, Math.min(1, confidence)) : 0.5;
+            return output;
+          });
+          return json(request, { ok: true, period: url.pathname.endsWith('previous-ut') ? 'previous' : 'last', records, provider: 'gemini', model: result._model_used || model });
+        }
         if (url.pathname === '/api/extract/pv-document') {
           const records = (Array.isArray(result.records) ? result.records : []).map((record) => {
             const output = {};
