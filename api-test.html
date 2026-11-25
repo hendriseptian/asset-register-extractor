@@ -1,0 +1,81 @@
+<!doctype html>
+<html lang="id">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>MECHASSET Equipment API Test</title>
+<style>
+:root{color-scheme:dark;font-family:Arial,sans-serif}body{margin:0;background:#101820;color:#e8eef3;padding:28px}.wrap{max-width:760px;margin:auto}h1{font-size:24px}p{color:#aebdca;line-height:1.5}.panel{background:#192631;border:1px solid #344754;border-radius:12px;padding:20px;margin:18px 0}label{display:block;margin:0 0 8px;font-weight:600}input{box-sizing:border-box;width:100%;padding:12px;border-radius:8px;border:1px solid #526675;background:#0e171e;color:#fff;margin-bottom:14px}button{padding:12px 18px;border:0;border-radius:8px;background:#38a7d8;color:#07131a;font-weight:700;cursor:pointer}button:disabled{opacity:.5;cursor:wait}pre{white-space:pre-wrap;overflow-wrap:anywhere;background:#0b1218;padding:14px;border-radius:8px;min-height:100px;color:#d5e4ed}.hint{font-size:13px;color:#aebdca}.ok{color:#75d6a0}.bad{color:#ff9a9a}
+</style>
+</head>
+<body><main class="wrap">
+<h1>MECHASSET — Equipment API Test</h1>
+<p>Pengujian otomatis CREATE → READ → UPDATE → DELETE pada data dummy. Data uji akan dihapus di akhir jika seluruh proses berjalan normal.</p>
+<section class="panel">
+<label for="token">MECHASSET API Token</label>
+<input id="token" type="password" autocomplete="off" placeholder="Paste token Cloudflare di sini">
+<button id="run">Jalankan pengujian CRUD</button>
+<p class="hint">Token hanya digunakan sementara di memori halaman ini. Tidak disimpan ke localStorage, tidak dikirim ke GitHub, dan jangan bagikan halaman ini saat token sedang diisi. Tutup halaman setelah selesai.</p>
+</section>
+<section class="panel"><strong>Hasil pengujian</strong><pre id="log">Menunggu pengujian...</pre></section>
+</main>
+<script>
+const API='https://asset-register-extractor.hendriseptian25.workers.dev/api/equipment';
+const logEl=document.getElementById('log'),runBtn=document.getElementById('run');
+function log(s){logEl.textContent+=s+'\n'}
+async function call(path,method,token,body){
+ const res=await fetch(API+path,{method,headers:{'Authorization':'Bearer '+token,'Content-Type':'application/json'},...(body?{body:JSON.stringify(body)}:{})});
+ let data={};try{data=await res.json()}catch{}
+ return {status:res.status,data};
+}
+runBtn.addEventListener('click',async()=>{
+ const token=document.getElementById('token').value.trim();
+ if(!token){alert('Masukkan token terlebih dahulu.');return}
+ if(!confirm('Lanjutkan? Pengujian akan membuat satu equipment dummy dan menghapusnya di akhir.'))return;
+ runBtn.disabled=true;logEl.textContent='';
+ let id=null,failed=false;
+ try{
+  log('1. GET list equipment...');
+  let r=await call('','GET',token);
+  if(!r.data.ok)throw new Error('GET list gagal (HTTP '+r.status+'): '+(r.data.error||'unknown'));
+  log('PASS — GET list, jumlah saat ini: '+r.data.count);
+
+  const suffix=Date.now().toString().slice(-8);
+  log('2. POST create dummy equipment...');
+  r=await call('','POST',token,{module:'PV',tag:'DUMMY-PV-'+suffix,serial_number:'TEST-'+suffix,equipment_name:'MECHASSET CRUD Test Vessel',owner_operator:'TEST ONLY',location:'TEST AREA',identity_json:{test_record:true,purpose:'temporary CRUD verification'}});
+  if(r.status!==201||!r.data.ok||!r.data.equipment?.id)throw new Error('CREATE gagal (HTTP '+r.status+'): '+(r.data.error||JSON.stringify(r.data)));
+  id=r.data.equipment.id;log('PASS — CREATE, ID: '+id);
+
+  log('3. GET detail equipment...');
+  r=await call('/'+encodeURIComponent(id),'GET',token);
+  if(r.status!==200||!r.data.ok||r.data.equipment?.tag!=='DUMMY-PV-'+suffix)throw new Error('READ gagal (HTTP '+r.status+'): '+(r.data.error||'data tidak cocok'));
+  log('PASS — READ detail');
+
+  log('4. PUT update equipment...');
+  r=await call('/'+encodeURIComponent(id),'PUT',token,{location:'TEST AREA UPDATED',equipment_name:'MECHASSET CRUD Test Vessel UPDATED'});
+  if(r.status!==200||!r.data.ok||r.data.equipment?.location!=='TEST AREA UPDATED')throw new Error('UPDATE gagal (HTTP '+r.status+'): '+(r.data.error||'data tidak cocok'));
+  log('PASS — UPDATE');
+
+  log('5. DELETE dummy equipment...');
+  r=await call('/'+encodeURIComponent(id),'DELETE',token);
+  if(r.status!==200||!r.data.ok)throw new Error('DELETE gagal (HTTP '+r.status+'): '+(r.data.error||'unknown'));
+  id=null;log('PASS — DELETE');
+
+  log('6. Verify deleted record...');
+  r=await call('/'+encodeURIComponent(r.data.deleted_id||''),'GET',token);
+  if(r.status!==400&&r.status!==404)log('WARNING — status setelah delete: HTTP '+r.status);
+  else log('PASS — record tidak ditemukan setelah DELETE');
+  log('\nHASIL AKHIR: CRUD TEST SELESAI.');
+ }catch(e){
+  failed=true;log('\nGAGAL: '+e.message);
+  if(id){
+   log('Mencoba menghapus data dummy yang sempat dibuat...');
+   try{const cleanup=await call('/'+encodeURIComponent(id),'DELETE',token);log(cleanup.data.ok?'CLEANUP PASS — data dummy dihapus.':'CLEANUP PERLU DICEK — HTTP '+cleanup.status+' '+(cleanup.data.error||''));}catch(cleanErr){log('CLEANUP ERROR — periksa data dummy secara manual.')}
+  }
+ }finally{
+  document.getElementById('token').value='';
+  runBtn.disabled=false;
+  if(!failed)log('\nToken telah dikosongkan dari halaman.');
+ }
+});
+</script></body></html>
