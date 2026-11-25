@@ -38,6 +38,7 @@ jobs:
           cp multi-document.html _site/
           cp mapping.html _site/
           cp review.html _site/
+          cp api-test.html _site/
           cp bvv-extraction.html _site/
           cp bvv-review.html _site/
           cp bvv-mapping.html _site/
