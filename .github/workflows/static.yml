@@ -37,6 +37,7 @@ jobs:
           cp bvv-dashboard.html _site/
           cp pv-dashboard.html _site/
           cp pv-documents.html _site/
+          cp pv-ut.html _site/
           cp extraction.html _site/
           cp multi-document.html _site/
           cp mapping.html _site/
