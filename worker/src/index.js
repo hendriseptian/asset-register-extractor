@@ -347,10 +347,13 @@ export default {
     }
 
     // PV document and extracted-record persistence. Source binaries are never stored here.
-    if (url.pathname === '/api/pv/documents' || url.pathname === '/api/pv/register' || url.pathname.startsWith('/api/pv/records/')) {
+    if (url.pathname === '/api/pv/equipment' || url.pathname === '/api/pv/documents' || url.pathname === '/api/pv/register' || url.pathname.startsWith('/api/pv/records/')) {
       if (!env.DB) return json(request, { error: 'D1 binding DB is not configured.' }, 503);
-      if (!await equipmentApiAuthorized(request, env)) return json(request, { error: 'Unauthorized.' }, 401);
       try {
+        if (url.pathname === '/api/pv/equipment' && request.method === 'GET') {
+          const result = await env.DB.prepare("SELECT id, module, tag, serial_number, equipment_name, owner_operator, location, identity_json FROM equipment WHERE module = 'PV' ORDER BY updated_at DESC LIMIT 500").all();
+          return json(request, { ok: true, equipment: result.results || [], count: (result.results || []).length });
+        }
         if (url.pathname === '/api/pv/documents' && request.method === 'POST') {
           const body = await request.json();
           const equipmentId = String(body.equipment_id || '').slice(0, 100);
@@ -415,9 +418,6 @@ export default {
       return json(request, { error: 'Not found' }, 404);
     }
     if (request.method !== 'POST') return json(request, { error: 'Method not allowed' }, 405);
-    if ((url.pathname === '/api/extract/pv-document' || url.pathname === '/api/extract/pv-previous-ut' || url.pathname === '/api/extract/pv-last-ut') && !await equipmentApiAuthorized(request, env)) {
-      return json(request, { error: 'Unauthorized.' }, 401);
-    }
     if (!env.GEMINI_API_KEY) return json(request, { error: 'Gemini API key is not configured' }, 503);
 
     const model = env.GEMINI_MODEL || MODEL_DEFAULT;
