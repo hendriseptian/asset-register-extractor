@@ -346,6 +346,71 @@ export default {
       }
     }
 
+    // PV document and extracted-record persistence. Source binaries are never stored here.
+    if (url.pathname === '/api/pv/documents' || url.pathname === '/api/pv/register' || url.pathname.startsWith('/api/pv/records/')) {
+      if (!env.DB) return json(request, { error: 'D1 binding DB is not configured.' }, 503);
+      if (!await equipmentApiAuthorized(request, env)) return json(request, { error: 'Unauthorized.' }, 401);
+      try {
+        if (url.pathname === '/api/pv/documents' && request.method === 'POST') {
+          const body = await request.json();
+          const equipmentId = String(body.equipment_id || '').slice(0, 100);
+          const documentType = String(body.document_type || '').slice(0, 100);
+          const fileName = String(body.file_name || '').slice(0, 255);
+          const recordType = String(body.record_type || 'document');
+          const records = body.records;
+          if (!equipmentId || !documentType || !fileName || !Array.isArray(records) || records.length > 1000) {
+            return json(request, { error: 'equipment_id, document_type, file_name and records[] (max 1000) are required.' }, 400);
+          }
+          if (!['document', 'previous_ut', 'last_ut'].includes(recordType)) return json(request, { error: 'Invalid record_type.' }, 400);
+          const equipment = await env.DB.prepare("SELECT id FROM equipment WHERE id = ? AND module = 'PV'").bind(equipmentId).first();
+          if (!equipment) return json(request, { error: 'PV equipment not found.' }, 404);
+          const docId = crypto.randomUUID();
+          const statements = [env.DB.prepare(
+            'INSERT INTO pv_documents (id, equipment_id, document_type, period, file_name, mime_type, extraction_model) VALUES (?, ?, ?, ?, ?, ?, ?)'
+          ).bind(docId, equipmentId, documentType, body.period ? String(body.period).slice(0, 20) : null, fileName, body.mime_type ? String(body.mime_type).slice(0, 100) : null, body.extraction_model ? String(body.extraction_model).slice(0, 100) : null)];
+          for (const record of records) {
+            if (!record || typeof record !== 'object' || Array.isArray(record) || JSON.stringify(record).length > 60000) {
+              return json(request, { error: 'Each record must be a JSON object up to 60 KB.' }, 400);
+            }
+            statements.push(env.DB.prepare(
+              'INSERT INTO pv_extracted_records (id, document_id, equipment_id, record_type, record_json) VALUES (?, ?, ?, ?, ?)'
+            ).bind(crypto.randomUUID(), docId, equipmentId, recordType, JSON.stringify(record)));
+          }
+          await env.DB.batch(statements);
+          return json(request, { ok: true, document_id: docId, saved_records: records.length }, 201);
+        }
+
+        if (url.pathname === '/api/pv/register' && request.method === 'GET') {
+          const equipmentId = String(url.searchParams.get('equipment_id') || '').slice(0, 100);
+          if (!equipmentId) return json(request, { error: 'equipment_id is required.' }, 400);
+          const equipment = await env.DB.prepare("SELECT id, tag, serial_number, equipment_name, owner_operator, location, identity_json FROM equipment WHERE id = ? AND module = 'PV'").bind(equipmentId).first();
+          if (!equipment) return json(request, { error: 'PV equipment not found.' }, 404);
+          const result = await env.DB.prepare(
+            'SELECT d.id AS document_id, d.document_type, d.period, d.file_name, d.extraction_model, d.created_at AS document_created_at, r.id AS record_id, r.record_type, r.record_json, r.review_status, r.created_at, r.updated_at FROM pv_documents d JOIN pv_extracted_records r ON r.document_id = d.id WHERE d.equipment_id = ? ORDER BY d.created_at DESC, r.created_at ASC LIMIT 5000'
+          ).bind(equipmentId).all();
+          const records = (result.results || []).map(row => ({ ...row, record: (() => { try { return JSON.parse(row.record_json); } catch { return {}; } })() }));
+          return json(request, { ok: true, equipment, records, count: records.length });
+        }
+
+        if (url.pathname.startsWith('/api/pv/records/') && request.method === 'PUT') {
+          const recordId = decodeURIComponent(url.pathname.slice('/api/pv/records/'.length));
+          const body = await request.json();
+          if (!recordId || !body.record || typeof body.record !== 'object' || Array.isArray(body.record)) return json(request, { error: 'record_id and record object are required.' }, 400);
+          const status = String(body.review_status || 'pending');
+          if (!['pending', 'reviewed', 'flagged'].includes(status)) return json(request, { error: 'review_status must be pending, reviewed, or flagged.' }, 400);
+          if (JSON.stringify(body.record).length > 60000) return json(request, { error: 'Record exceeds 60 KB.' }, 413);
+          const result = await env.DB.prepare("UPDATE pv_extracted_records SET record_json = ?, review_status = ?, updated_at = strftime('%Y-%m-%dT%H:%M:%fZ', 'now') WHERE id = ?")
+            .bind(JSON.stringify(body.record), status, recordId).run();
+          if (!result.meta?.changes) return json(request, { error: 'PV extracted record not found.' }, 404);
+          return json(request, { ok: true, record_id: recordId, review_status: status });
+        }
+        return json(request, { error: 'Method not allowed.' }, 405);
+      } catch (error) {
+        if (error instanceof SyntaxError) return json(request, { error: 'Invalid JSON request body.' }, 400);
+        return json(request, { error: 'PV persistence request failed.' }, 500);
+      }
+    }
+
     if (!['/api/extract/document', '/api/extract/table', '/api/extract/bvv-document', '/api/extract/bvv-table', '/api/extract/pv-document', '/api/extract/pv-previous-ut', '/api/extract/pv-last-ut'].includes(url.pathname)) {
       return json(request, { error: 'Not found' }, 404);
     }
