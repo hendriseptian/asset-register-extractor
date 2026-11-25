@@ -347,12 +347,62 @@ export default {
     }
 
     // PV document and extracted-record persistence. Source binaries are never stored here.
-    if (url.pathname === '/api/pv/equipment' || url.pathname === '/api/pv/documents' || url.pathname === '/api/pv/register' || url.pathname.startsWith('/api/pv/records/')) {
+    if (url.pathname === '/api/pv/equipment' || url.pathname === '/api/pv/documents' || url.pathname === '/api/pv/intake' || url.pathname === '/api/pv/register' || url.pathname.startsWith('/api/pv/records/')) {
       if (!env.DB) return json(request, { error: 'D1 binding DB is not configured.' }, 503);
       try {
         if (url.pathname === '/api/pv/equipment' && request.method === 'GET') {
           const result = await env.DB.prepare("SELECT id, module, tag, serial_number, equipment_name, owner_operator, location, identity_json FROM equipment WHERE module = 'PV' ORDER BY updated_at DESC LIMIT 500").all();
           return json(request, { ok: true, equipment: result.results || [], count: (result.results || []).length });
+        }
+        if (url.pathname === '/api/pv/intake' && request.method === 'POST') {
+          const body = await request.json();
+          const documentType = String(body.document_type || 'Other Supporting Documents').slice(0, 100);
+          const fileName = String(body.file_name || '').slice(0, 255);
+          const mimeType = String(body.mime_type || '').slice(0, 100) || null;
+          const modelName = String(body.extraction_model || '').slice(0, 100) || null;
+          const records = body.records;
+          if (!fileName || !Array.isArray(records) || records.length < 1 || records.length > 100) {
+            return json(request, { error: 'file_name and records[] (1-100) are required.' }, 400);
+          }
+          const outcomes = [];
+          for (const record of records) {
+            if (!record || typeof record !== 'object' || Array.isArray(record) || JSON.stringify(record).length > 60000) {
+              return json(request, { error: 'Each extracted record must be a JSON object up to 60 KB.' }, 400);
+            }
+            const tag = String(record.equipment_tag || '').trim().slice(0, 300);
+            if (!tag) {
+              const stagingId = crypto.randomUUID();
+              await env.DB.prepare(
+                'INSERT INTO pv_intake_staging (id, document_type, file_name, mime_type, extraction_model, record_json) VALUES (?, ?, ?, ?, ?, ?)'
+              ).bind(stagingId, documentType, fileName, mimeType, modelName, JSON.stringify(record)).run();
+              outcomes.push({ status: 'pending_identification', staging_id: stagingId, equipment_tag: null });
+              continue;
+            }
+            let equipment = await env.DB.prepare(
+              "SELECT id, tag FROM equipment WHERE module = 'PV' AND lower(trim(tag)) = lower(trim(?)) LIMIT 1"
+            ).bind(tag).first();
+            let created = false;
+            if (!equipment) {
+              const equipmentId = crypto.randomUUID();
+              const identity = Object.fromEntries(Object.entries(record).filter(([key, value]) => !key.startsWith('_') && value !== null && value !== ''));
+              await env.DB.prepare(
+                "INSERT INTO equipment (id, module, tag, serial_number, equipment_name, owner_operator, location, identity_json) VALUES (?, 'PV', ?, ?, ?, ?, ?, ?)"
+              ).bind(equipmentId, tag, record.serial_number || null, record.equipment_name || null, record.owner_operator || null, record.location || null, JSON.stringify({ ...identity, _registration_status: 'draft', _registration_source: fileName })).run();
+              equipment = { id: equipmentId, tag };
+              created = true;
+            }
+            const documentId = crypto.randomUUID();
+            await env.DB.batch([
+              env.DB.prepare(
+                'INSERT INTO pv_documents (id, equipment_id, document_type, file_name, mime_type, extraction_model) VALUES (?, ?, ?, ?, ?, ?)'
+              ).bind(documentId, equipment.id, documentType, fileName, mimeType, modelName),
+              env.DB.prepare(
+                "INSERT INTO pv_extracted_records (id, document_id, equipment_id, record_type, record_json) VALUES (?, ?, ?, 'document', ?)"
+              ).bind(crypto.randomUUID(), documentId, equipment.id, JSON.stringify(record))
+            ]);
+            outcomes.push({ status: created ? 'draft_created' : 'matched_existing', equipment_id: equipment.id, equipment_tag: equipment.tag, document_id: documentId });
+          }
+          return json(request, { ok: true, outcomes, saved: outcomes.filter(x => x.status !== 'pending_identification').length, pending_identification: outcomes.filter(x => x.status === 'pending_identification').length }, 201);
         }
         if (url.pathname === '/api/pv/documents' && request.method === 'POST') {
           const body = await request.json();
