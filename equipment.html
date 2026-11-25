@@ -1,0 +1,100 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>MECHASSET | Equipment Management</title>
+<link rel="stylesheet" href="assets/css/style.css"><link rel="stylesheet" href="assets/css/dashboard.css">
+<link rel="icon" type="image/svg+xml" href="assets/mechasset-logo.svg">
+<script src="assets/js/theme.js" defer></script>
+<style>
+.em-wrap{max-width:1400px;margin:0 auto}.em-toolbar{display:flex;gap:12px;flex-wrap:wrap;align-items:end}.em-field{display:flex;flex-direction:column;gap:6px;min-width:150px;flex:1}.em-field label{font-size:12px;font-weight:700;color:var(--muted)}.em-field input,.em-field select{width:100%;box-sizing:border-box;padding:11px 12px;border:1px solid var(--line);border-radius:8px;background:var(--white);color:var(--ink)}.em-actions{display:flex;gap:8px;align-items:center;flex-wrap:wrap}.em-table-wrap{overflow:auto}.em-table{width:100%;border-collapse:collapse;min-width:780px}.em-table th,.em-table td{text-align:left;padding:12px;border-bottom:1px solid var(--line);font-size:13px}.em-table th{font-size:11px;text-transform:uppercase;letter-spacing:.06em;color:var(--muted)}.em-table td button{margin-right:6px}.em-small{font-size:12px;color:var(--muted)}.em-status{padding:10px 12px;border-radius:8px;background:var(--surface);color:var(--muted);font-size:13px;white-space:pre-wrap}.em-status.error{color:#c84b4b}.em-status.success{color:#168451}.em-form-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}.em-form-grid .wide{grid-column:1/-1}.em-hidden{display:none!important}.em-token{max-width:520px}.em-pill{display:inline-block;padding:4px 8px;border-radius:20px;background:var(--surface);font-size:11px;font-weight:700}.em-btn-danger{background:#a83b3b!important;color:white!important}.em-btn-secondary{background:var(--surface)!important;color:var(--ink)!important;border:1px solid var(--line)!important}
+@media(max-width:700px){.em-form-grid{grid-template-columns:1fr}.em-form-grid .wide{grid-column:auto}.main-content{padding:18px 14px}.em-toolbar{align-items:stretch}}
+</style></head>
+<body><div class="app-shell">
+<aside class="sidebar"><div class="sidebar-brand"><img class="brand-logo small" src="assets/mechasset-logo.svg" alt="MECHASSET logo"><div><b>MECHASSET</b><small>Mechanical Asset Management</small></div></div>
+<nav><a href="dashboard.html">Equipment selection</a><a class="active" href="equipment.html">Equipment Management</a><a href="psv-dashboard.html">PSV Workspace</a><a href="bvv-dashboard.html">PVV Workspace</a></nav>
+<div class="sidebar-bottom"><a href="index.html">Settings / Worker URL</a></div></aside>
+<main class="main-content"><div class="em-wrap">
+<header class="topbar"><div><p class="eyebrow">MECHASSET · DATABASE</p><h1>Equipment Management</h1></div><span class="status-pill">API workspace</span></header>
+<section class="panel"><div class="panel-heading"><div><p class="eyebrow">SECURE CONNECTION</p><h2>Connect to Equipment API</h2></div></div>
+<p class="em-small">Enter the Worker API token for this browser session. It is held in page memory only and cleared when you disconnect or close/reload this page. Do not share this token or embed it in frontend source code. This shared-token mode is for controlled administrator testing, not multi-user production authentication.</p>
+<div class="em-toolbar"><div class="em-field em-token"><label for="api-token">MECHASSET API Token</label><input id="api-token" type="password" autocomplete="off" placeholder="Paste Cloudflare Worker secret"></div><div class="em-actions"><button class="btn primary" id="connect-btn">Connect</button><button class="btn em-btn-secondary" id="disconnect-btn" disabled>Disconnect</button></div></div>
+<div id="connection-status" class="em-status" style="margin-top:12px">Not connected.</div></section>
+<section class="panel em-hidden" id="management-panel"><div class="panel-heading"><div><p class="eyebrow">REGISTER DATABASE</p><h2>Equipment Register</h2><p class="em-small">Manage equipment master records for PSV, BVV and PV modules.</p></div><button class="btn primary" id="new-btn">+ Add Equipment</button></div>
+<div class="em-toolbar" style="margin-bottom:16px"><div class="em-field"><label for="module-filter">Module</label><select id="module-filter"><option value="">All modules</option><option>PSV</option><option>BVV</option><option>PV</option></select></div><div class="em-field"><label for="search-input">Search tag / serial / name</label><input id="search-input" placeholder="Search equipment..."></div><div class="em-actions"><button class="btn em-btn-secondary" id="refresh-btn">Refresh</button></div></div>
+<div class="em-table-wrap"><table class="em-table"><thead><tr><th>Module</th><th>Equipment Tag</th><th>Serial Number</th><th>Equipment Name</th><th>Owner / Operator</th><th>Location</th><th>Actions</th></tr></thead><tbody id="equipment-rows"><tr><td colspan="7">No data loaded.</td></tr></tbody></table></div>
+<p id="record-count" class="em-small">0 records</p></section>
+<section class="panel em-hidden" id="form-panel"><div class="panel-heading"><div><p class="eyebrow">EQUIPMENT MASTER DATA</p><h2 id="form-title">Add Equipment</h2></div></div>
+<form id="equipment-form"><div class="em-form-grid">
+<div class="em-field"><label for="f-module">Module *</label><select id="f-module" required><option value="PV">PV</option><option value="PSV">PSV</option><option value="BVV">BVV</option></select></div>
+<div class="em-field"><label for="f-tag">Equipment Tag *</label><input id="f-tag" required maxlength="300" placeholder="e.g. V-101 / PSV-001"></div>
+<div class="em-field"><label for="f-serial">Serial Number</label><input id="f-serial" maxlength="300"></div>
+<div class="em-field"><label for="f-name">Equipment Name</label><input id="f-name" maxlength="300"></div>
+<div class="em-field"><label for="f-owner">Owner / Operator</label><input id="f-owner" maxlength="300"></div>
+<div class="em-field"><label for="f-location">Location</label><input id="f-location" maxlength="300"></div>
+<div class="em-field wide"><label for="f-identity">Additional identity data (JSON)</label><textarea id="f-identity" rows="4" style="width:100%;box-sizing:border-box;padding:11px;border:1px solid var(--line);border-radius:8px;background:var(--white);color:var(--ink)">{}</textarea></div>
+</div><div class="em-actions" style="margin-top:16px"><button class="btn primary" type="submit" id="save-btn">Save Equipment</button><button class="btn em-btn-secondary" type="button" id="cancel-btn">Cancel</button></div></form></section>
+<footer class="site-footer"><p class="footer-note">Equipment master data is stored in D1. Verify all values against approved source documents.</p><div class="footer-watermark">Designed &amp; Developed by <strong>Hendri Septian</strong> <span>© 2026</span></div></footer>
+</div></main></div>
+<script>
+(function(){
+ const API='https://asset-register-extractor.hendriseptian25.workers.dev/api/equipment';
+ const $=id=>document.getElementById(id);
+ let token='',items=[],editingId=null;
+ const status=(message,type='')=>{$('connection-status').textContent=message;$('connection-status').className='em-status '+type};
+ async function request(path='',method='GET',body){
+  const response=await fetch(API+path,{method,headers:{'Authorization':'Bearer '+token,'Content-Type':'application/json'},...(body!==undefined?{body:JSON.stringify(body)}:{})});
+  let data={};try{data=await response.json()}catch{}
+  if(!response.ok)throw new Error(data.error||('HTTP '+response.status));
+  return data;
+ }
+ function showForm(item){
+  editingId=item?.id||null;$('form-title').textContent=editingId?'Edit Equipment':'Add Equipment';
+  $('f-module').value=item?.module||'PV';$('f-tag').value=item?.tag||'';$('f-serial').value=item?.serial_number||'';
+  $('f-name').value=item?.equipment_name||'';$('f-owner').value=item?.owner_operator||'';$('f-location').value=item?.location||'';
+  let identity={};try{identity=JSON.parse(item?.identity_json||'{}')}catch{}
+  $('f-identity').value=JSON.stringify(identity,null,2);
+  $('form-panel').classList.remove('em-hidden');$('form-panel').scrollIntoView({behavior:'smooth',block:'start'});
+ }
+ function hideForm(){$('form-panel').classList.add('em-hidden');editingId=null}
+ function esc(v){return String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]))}
+ function render(){
+  const rows=$('equipment-rows');rows.innerHTML='';
+  if(!items.length){rows.innerHTML='<tr><td colspan="7">No equipment records found.</td></tr>'}
+  for(const item of items){
+   const tr=document.createElement('tr');
+   tr.innerHTML='<td><span class="em-pill">'+esc(item.module)+'</span></td><td><strong>'+esc(item.tag)+'</strong></td><td>'+esc(item.serial_number)+'</td><td>'+esc(item.equipment_name)+'</td><td>'+esc(item.owner_operator)+'</td><td>'+esc(item.location)+'</td><td><button class="btn em-btn-secondary" data-edit="'+esc(item.id)+'">Edit</button><button class="btn em-btn-danger" data-delete="'+esc(item.id)+'">Delete</button></td>';
+   rows.appendChild(tr);
+  }
+  $('record-count').textContent=items.length+' records';
+ }
+ async function load(){
+  const params=new URLSearchParams();if($('module-filter').value)params.set('module',$('module-filter').value);
+  if($('search-input').value.trim())params.set('search',$('search-input').value.trim());
+  const data=await request('?'+params.toString());items=data.equipment||[];render();
+ }
+ $('connect-btn').addEventListener('click',async()=>{
+  const candidate=$('api-token').value.trim();if(!candidate){status('Enter the API token first.','error');return}
+  token=candidate;
+  try{const data=await request();$('management-panel').classList.remove('em-hidden');$('disconnect-btn').disabled=false;$('connect-btn').disabled=true;$('api-token').disabled=true;status('Connected. Equipment API authentication succeeded.','success');items=data.equipment||[];render()}
+  catch(e){token='';status('Connection failed: '+e.message,'error')}
+ });
+ $('disconnect-btn').addEventListener('click',()=>{token='';items=[];$('api-token').value='';$('api-token').disabled=false;$('connect-btn').disabled=false;$('disconnect-btn').disabled=true;$('management-panel').classList.add('em-hidden');hideForm();status('Disconnected. Token cleared from page memory.')});
+ $('refresh-btn').addEventListener('click',async()=>{try{await load();status('Equipment list refreshed.','success')}catch(e){status('Load failed: '+e.message,'error')}});
+ $('module-filter').addEventListener('change',async()=>{try{await load()}catch(e){status(e.message,'error')}});
+ let searchTimer; $('search-input').addEventListener('input',()=>{clearTimeout(searchTimer);searchTimer=setTimeout(async()=>{try{await load()}catch(e){status(e.message,'error')}},300)});
+ $('new-btn').addEventListener('click',()=>showForm(null));$('cancel-btn').addEventListener('click',hideForm);
+ $('equipment-rows').addEventListener('click',async e=>{
+  const edit=e.target.closest('[data-edit]'),del=e.target.closest('[data-delete]');
+  if(edit){const item=items.find(x=>x.id===edit.dataset.edit);if(item)showForm(item)}
+  if(del){const item=items.find(x=>x.id===del.dataset.delete);if(!item||!confirm('Delete equipment '+item.tag+'? This action cannot be undone.'))return;
+   try{await request('/'+encodeURIComponent(item.id),'DELETE');status('Equipment '+item.tag+' deleted.','success');await load()}catch(err){status('Delete failed: '+err.message,'error')}
+  }
+ });
+ $('equipment-form').addEventListener('submit',async e=>{
+  e.preventDefault();let identity;try{identity=JSON.parse($('f-identity').value||'{}');if(!identity||Array.isArray(identity)||typeof identity!=='object')throw new Error()}catch{status('Additional identity data must be a valid JSON object.','error');return}
+  const body={module:$('f-module').value,tag:$('f-tag').value.trim(),serial_number:$('f-serial').value.trim(),equipment_name:$('f-name').value.trim(),owner_operator:$('f-owner').value.trim(),location:$('f-location').value.trim(),identity_json:identity};
+  try{if(editingId){await request('/'+encodeURIComponent(editingId),'PUT',body);status('Equipment updated successfully.','success')}else{await request('','POST',body);status('Equipment created successfully.','success')}hideForm();await load()}catch(err){status('Save failed: '+err.message,'error')}
+ });
+})();
+</script></body></html>
