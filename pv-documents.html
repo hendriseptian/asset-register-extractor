@@ -25,7 +25,7 @@
 <script>
 (function(){
  const API='https://asset-register-extractor.hendriseptian25.workers.dev';
- const $=id=>document.getElementById(id);let equipment=[],results=[]; const workerUrl=()=>((localStorage.getItem('are_worker_url')||'').trim().replace(/\/$/,'') );
+ const $=id=>document.getElementById(id);let equipment=[],results=[]; const workerUrl=()=>((localStorage.getItem('are_worker_url')||'').trim().replace(/\/$/,'') );$('worker-url').value=workerUrl();
  const fields=['equipment_tag','equipment_name','equipment_type','manufacturer','model','serial_number','year_built','owner_operator','location','design_code','design_pressure','design_temperature','mawp','operating_pressure','operating_temperature','volume','diameter','length_or_height','material_shell','material_head','corrosion_allowance','nominal_thickness','inspection_date','inspection_summary','document_reference'];
  const labels={equipment_tag:'Equipment Tag',equipment_name:'Equipment Name',equipment_type:'Equipment Type',manufacturer:'Manufacturer',model:'Model',serial_number:'Serial Number',year_built:'Year Built',owner_operator:'Owner / Operator',location:'Location',design_code:'Design Code',design_pressure:'Design Pressure',design_temperature:'Design Temperature',mawp:'MAWP',operating_pressure:'Operating Pressure',operating_temperature:'Operating Temperature',volume:'Volume',diameter:'Diameter',length_or_height:'Length / Height',material_shell:'Shell Material',material_head:'Head Material',corrosion_allowance:'Corrosion Allowance',nominal_thickness:'Nominal Thickness',inspection_date:'Inspection Date',inspection_summary:'Inspection Summary',document_reference:'Document Reference'};
  function setStatus(id,msg,kind){$(id).textContent=msg;$(id).className='pv-alert '+(kind||'')}
