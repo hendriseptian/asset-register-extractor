@@ -20,12 +20,12 @@
 <p class="em-small">Enter the Worker API token for this browser session. It is held in page memory only and cleared when you disconnect or close/reload this page. Do not share this token or embed it in frontend source code. This shared-token mode is for controlled administrator testing, not multi-user production authentication.</p>
 <div class="em-toolbar"><div class="em-field em-token"><label for="api-token">MECHASSET API Token</label><input id="api-token" type="password" autocomplete="off" placeholder="Paste Cloudflare Worker secret"></div><div class="em-actions"><button class="btn primary" id="connect-btn">Connect</button><button class="btn em-btn-secondary" id="disconnect-btn" disabled>Disconnect</button></div></div>
 <div id="connection-status" class="em-status" style="margin-top:12px">Not connected.</div></section>
-<section class="panel em-hidden" id="management-panel"><div class="panel-heading"><div><p class="eyebrow">REGISTER DATABASE</p><h2>Equipment Register</h2><p class="em-small">Manage equipment master records for PSV, BVV and PV modules.</p></div><button class="btn primary" id="new-btn">+ Add Equipment</button></div>
+<section class="panel em-hidden" id="management-panel"><div class="panel-heading"><div><p class="eyebrow">REGISTER DATABASE</p><h2>Equipment Register</h2><p class="em-small">Manage PSV and BVV master records. PV equipment is created automatically from scanned source documents in the PV Documents Extraction workflow.</p></div><button class="btn primary" id="new-btn">+ Add Equipment</button></div>
 <div class="em-toolbar" style="margin-bottom:16px"><div class="em-field"><label for="module-filter">Module</label><select id="module-filter"><option value="">All modules</option><option>PSV</option><option>BVV</option><option>PV</option></select></div><div class="em-field"><label for="search-input">Search tag / serial / name</label><input id="search-input" placeholder="Search equipment..."></div><div class="em-actions"><button class="btn em-btn-secondary" id="refresh-btn">Refresh</button></div></div>
 <div class="em-table-wrap"><table class="em-table"><thead><tr><th>Module</th><th>Equipment Tag</th><th>Serial Number</th><th>Equipment Name</th><th>Owner / Operator</th><th>Location</th><th>Actions</th></tr></thead><tbody id="equipment-rows"><tr><td colspan="7">No data loaded.</td></tr></tbody></table></div>
 <p id="record-count" class="em-small">0 records</p></section>
 <section class="panel em-hidden" id="form-panel"><div class="panel-heading"><div><p class="eyebrow">EQUIPMENT MASTER DATA</p><h2 id="form-title">Add Equipment</h2></div></div>
-<form id="equipment-form"><div class="em-form-grid">
+<form id="equipment-form"><p class="em-small">PV records must be created through PV Documents Extraction so the equipment tag and identity are traceable to source documents. Manual PV creation is disabled.</p><div class="em-form-grid">
 <div class="em-field"><label for="f-module">Module *</label><select id="f-module" required><option value="PV">PV</option><option value="PSV">PSV</option><option value="BVV">BVV</option></select></div>
 <div class="em-field"><label for="f-tag">Equipment Tag *</label><input id="f-tag" required maxlength="300" placeholder="e.g. V-101 / PSV-001"></div>
 <div class="em-field"><label for="f-serial">Serial Number</label><input id="f-serial" maxlength="300"></div>
@@ -92,7 +92,7 @@
   }
  });
  $('equipment-form').addEventListener('submit',async e=>{
-  e.preventDefault();let identity;try{identity=JSON.parse($('f-identity').value||'{}');if(!identity||Array.isArray(identity)||typeof identity!=='object')throw new Error()}catch{status('Additional identity data must be a valid JSON object.','error');return}
+  e.preventDefault();if(!editingId&&$('f-module').value==='PV'){status('PV equipment cannot be created manually here. Upload its source document through PV Documents Extraction so the tag is extracted and verified.','error');return}let identity;try{identity=JSON.parse($('f-identity').value||'{}');if(!identity||Array.isArray(identity)||typeof identity!=='object')throw new Error()}catch{status('Additional identity data must be a valid JSON object.','error');return}
   const body={module:$('f-module').value,tag:$('f-tag').value.trim(),serial_number:$('f-serial').value.trim(),equipment_name:$('f-name').value.trim(),owner_operator:$('f-owner').value.trim(),location:$('f-location').value.trim(),identity_json:identity};
   try{if(editingId){await request('/'+encodeURIComponent(editingId),'PUT',body);status('Equipment updated successfully.','success')}else{await request('','POST',body);status('Equipment created successfully.','success')}hideForm();await load()}catch(err){status('Save failed: '+err.message,'error')}
  });
