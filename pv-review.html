@@ -86,7 +86,7 @@ function updateSummary(){$('docs-count').textContent=records.filter(r=>r.record_
 function equipmentIdentity(eq){try{return typeof eq.identity_json==='string'?JSON.parse(eq.identity_json||'{}'):(eq.identity_json||{})}catch{return {}}}
 function hasValue(v){return v!==null&&v!==undefined&&String(v).trim()!==''}
 function normalizeEquipmentTag(v){return String(v??'').normalize('NFKC').toLowerCase().replace(/[^a-z0-9]/g,'')}
-function normalizeJointEfficiency(record){const je=String(record?.joint_efficiency??'').trim().replace(/,/g,'.').replace(/[^0-9.]/g,''),rt=String(record?.radiography??'').toUpperCase().replace(/[^A-Z]/g,'');const a={'1':'FULL','1.0':'FULL','0.8':'SPOT','0.80':'SPOT','0.75':'NONE'},b={FULL:'1',SPOT:'0.8',NONE:'0.75'};return {joint_efficiency:je?(a[je]?je:String(record.joint_efficiency).trim()):(b[rt]||''),radiography:rt?(a[je]||(['FULL','SPOT','NONE'].includes(rt)?rt:String(record.radiography).trim())):(a[je]||'')}}
+function normalizeJointEfficiency(record){const je=String(record?.joint_efficiency??'').trim().replace(/,/g,'.').replace(/[^0-9.]/g,''),rawRt=String(record?.radiography??'').toUpperCase().replace(/[^A-Z]/g,''),rt=rawRt.includes('FULL')?'FULL':rawRt.includes('SPOT')?'SPOT':rawRt.includes('NONE')?'NONE':rawRt;const a={'1':'FULL','1.0':'FULL','1.00':'FULL','0.8':'SPOT','0.80':'SPOT','0.75':'NONE'},b={FULL:'1',SPOT:'0.8',NONE:'0.75'};return {joint_efficiency:je?(a[je]?je:String(record.joint_efficiency).trim()):(b[rt]||''),radiography:rt?(a[je]||(['FULL','SPOT','NONE'].includes(rt)?rt:String(record.radiography).trim())):(a[je]||'')}}
 function recordObject(row){
  let value=row?.record;
  if(typeof value==='string'){try{value=JSON.parse(value)}catch{value={}}}
