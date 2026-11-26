@@ -93,19 +93,27 @@ function normalizeRegisterDate(value){
 }
 function yearFromDate(value){
  if(value&&typeof value==='object'){for(const k of ['inspection_date','inspectionDate','report_date','reportDate','date_of_inspection','date']){const y=yearFromDate(value[k]);if(y)return y}return ''}
- const d=normalizeRegisterDate(value),m=d.match(/(?:^|\/)(\d{4})$/);if(m)return m[1];
- const year=String(value??'').match(/\b(19|20)\d{2}\b/);return year?year[0]:'';
+ const raw=String(value??'').trim();
+ const normalized=normalizeRegisterDate(raw),full=normalized.match(/(?:^|\/)((?:19|20)\d{2})$/);if(full)return full[1];
+ const named=raw.match(/\b\d{1,2}[-\s/]([A-Za-z]{3,})[-\s/](\d{2}|\d{4})\b/);
+ if(named){const yy=named[2];return yy.length===2?(Number(yy)>=50?'19':'20')+yy:yy}
+ const iso=raw.match(/\b((?:19|20)\d{2})[-/]\d{1,2}[-/]\d{1,2}\b/);if(iso)return iso[1];
+ const year=raw.match(/\b(19|20)\d{2}\b/);return year?year[0]:'';
 }
 function normalizeBuildYears(record,sourceRecords=[]){
  const out={...record};
  const candidates=sourceRecords.map(recordObject).concat([out]);
- const pairKeys=['year_built','built_used','year_built_used','built_year_used','built_year','year'];
+ const pairKeys=['year_built','built_used','year_built_used','built_year_used','built_year','year','built','used'];
  let pair='';
- for(const r of candidates){for(const key of pairKeys){const value=String(r?.[key]??'').trim();if(/^\d{4}\s*\/\s*\d{4}$/.test(value)){pair=value;break}}if(pair)break}
- if(pair){const parts=pair.split('/').map(v=>v.trim());out.year_built=parts[0];out.year_used=parts[1]}
+ for(const r of candidates){
+  for(const key of pairKeys){const value=String(r?.[key]??'').trim();if(/\b(?:19|20)\d{2}\s*\/\s*(?:19|20)\d{2}\b/.test(value)){pair=value.match(/(?:19|20)\d{2}\s*\/\s*(?:19|20)\d{2}/)[0];break}}
+  if(!pair)for(const [key,value] of Object.entries(r||{})){if(/built|used|year|commission/i.test(key)&&/\b(?:19|20)\d{2}\s*\/\s*(?:19|20)\d{2}\b/.test(String(value))){pair=String(value).match(/(?:19|20)\d{2}\s*\/\s*(?:19|20)\d{2}/)[0];break}}
+  if(pair)break;
+ }
+ if(pair){const parts=pair.split('/').map(v=>v.trim());if(!hasValue(out.year_built)||String(out.year_built).includes('/'))out.year_built=parts[0];if(!hasValue(out.year_used))out.year_used=parts[1]}
  if(/^\d{4}\s*\/\s*\d{4}$/.test(String(out.year_built??'').trim())){const parts=String(out.year_built).split('/').map(v=>v.trim());out.year_built=parts[0];if(!hasValue(out.year_used))out.year_used=parts[1]}
  if(!hasValue(out.year_used)){
-  const used=candidates.map(r=>r.year_used??r.used_year??r.year_commissioned??r.commissioning_year).find(v=>/^\d{4}$/.test(String(v??'').trim()));
+  const used=candidates.map(r=>r.year_used??r.used_year??r.year_of_use??r.year_in_service??r.commissioning_year??r.year_commissioned??r.date_used).find(v=>/^\d{4}$/.test(String(v??'').trim()));
   if(hasValue(used))out.year_used=String(used).trim();
  }
  if(!hasValue(out.date_built)&&/^\d{4}$/.test(String(out.year_built??'').trim()))out.date_built='01/01/'+out.year_built;
