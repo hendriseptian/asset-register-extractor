@@ -15,6 +15,11 @@ const MAX_DOCUMENT_BYTES = 10 * 1024 * 1024;
 const MAX_TABLE_BYTES = 90 * 1024;
 const MODEL_DEFAULT = 'gemini-3.5-flash-lite';
 
+// Shared tag normalizer used by PV intake and PV UT extraction routes.
+function normalizeTag(value) {
+  return String(value ?? '').normalize('NFKC').toLowerCase().replace(/[^a-z0-9]/g, '');
+}
+
 function getAllowedOrigin(request) {
   const origin = request.headers.get('Origin');
   if (!origin) return null;
