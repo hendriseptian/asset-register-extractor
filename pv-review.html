@@ -228,6 +228,8 @@ function renderCombined(){
    const prevRec=prev?recordObject(prev):{},lastRec=last?recordObject(last):{};
    const primary=last||prev;
    const merged={...base,...prevRec,...lastRec,component:group.part||lastRec.component||prevRec.component||'',
+    previous_inspection:base.previous_inspection||yearFromDate(reportDateOf(prevRec)),
+    last_inspection:base.last_inspection||yearFromDate(reportDateOf(lastRec)),
     previous_thickness:prevRec.thickness_reading??prevRec.previous_thickness??'',
     actual_thickness:lastRec.thickness_reading??lastRec.actual_thickness??'',
     inspection_date:lastRec.inspection_date||lastRec.report_date||prevRec.inspection_date||prevRec.report_date||''};
