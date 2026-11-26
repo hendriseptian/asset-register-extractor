@@ -132,7 +132,11 @@ function renderCombined(){
  if(!groups.length){$('records').innerHTML='<div class="rv-empty">No PV records found. Scan a Datasheet or UT report first.</div>';return}
  let n=0;
  const body=groups.map(({eq,base,rows,resolvedTag})=>rows.map((row,i)=>{
-  n++;const edited=applyEdits(row.record_id,row.record||{}),rec={...base,...edited};
+  n++;
+  const rec={...base};
+  for(const [field,value] of Object.entries(row.record||{}))if(hasValue(value))rec[field]=value;
+  const edits=readEdits()[String(row.record_id||'')]||{};
+  for(const [field,value] of Object.entries(edits))rec[field]=value;
   const cells=cols.slice(2).map(([letter,label,key])=>{
    const value=valueFor(letter,rec,eq,base,{...row,record_type:row.record_type},n-1);
    return '<td><input data-edit-field="'+letter+'" data-record-id="'+esc(row.record_id||'')+'" value="'+esc(value)+'" aria-label="'+esc(letter+' '+label)+'"></td>';
