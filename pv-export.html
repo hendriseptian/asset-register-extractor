@@ -68,12 +68,13 @@ function exportWorkbook(){
   const previousRows=g.rows.filter(x=>x.record_type==='previous_ut'),lastRows=g.rows.filter(x=>x.record_type==='last_ut');
   const docs=g.rows.filter(x=>!['previous_ut','last_ut'].includes(x.record_type));
   const partMap=new Map();
-  for(const source of [...previousRows,...lastRows]){
+  for(const source of [...previousRows,...lastRows,...docs]){
    const rec=source.record||{},part=String(rec.component||rec.part||rec.measurement_point||rec.identification||'').trim();
    if(!part)continue;
    const key=normalizeTag(part);
    if(!partMap.has(key))partMap.set(key,{part,previous:[],last:[]});
-   partMap.get(key)[source.record_type==='previous_ut'?'previous':'last'].push(source);
+   if(source.record_type==='previous_ut')partMap.get(key).previous.push(source);
+   else if(source.record_type==='last_ut')partMap.get(key).last.push(source);
   }
   const newest=list=>list.slice().sort((a,b)=>String(b.created_at||b.document_created_at||'').localeCompare(String(a.created_at||a.document_created_at||'')))[0];
   let display;
@@ -88,7 +89,7 @@ function exportWorkbook(){
      inspection_date:normalizeExportDate(lastRec.inspection_date||lastRec.report_date)};
     return {record_type:'combined_ut',record:combined};
    });
-  }else display=docs.length?docs.map(x=>({record_type:x.record_type,record:{...g.doc,...(x.record||{})}})):[{record_type:'document',record:g.doc}];
+  }else display=[{record_type:'document',record:g.doc}];
   const first=rowNum;
   for(let index=0;index<display.length;index++){
    const row=display[index],r={...g.doc};for(const [field,value] of Object.entries(row.record||{}))if(value!==null&&value!==undefined&&String(value).trim()!=='')r[field]=value;
@@ -113,6 +114,22 @@ function exportWorkbook(){
    border:cellBorder
   };
  }
+ // Match the supplied Database PV template: one worksheet, grouped headers and one row per Part.
+ // The populated template area is A:AI (35 columns); AJ is only a blank spacer.
+ const titleFill={patternType:'solid',fgColor:{rgb:'D9E1F2'}};
+ const headerFill={patternType:'solid',fgColor:{rgb:'E7E6E6'}};
+ for(let rr=0;rr<matrix.length;rr++)for(let cc=0;cc<35;cc++){
+  const addr=XLSX.utils.encode_cell({r:rr,c:cc});
+  if(!pv[addr])continue;
+  const isTop=rr===0,isHeader=rr===2||rr===3;
+  pv[addr].s={
+   font:{name:isTop&&cc===0?'Calibri':'Arial',sz:isTop?11:10,bold:isTop||isHeader,color:{rgb:'000000'}},
+   fill:isTop?titleFill:(isHeader?headerFill:undefined),
+   alignment:{vertical:'center',horizontal:'center',wrapText:true},
+   border:cellBorder
+  };
+ }
+ pv['!rows']=[{hpt:12.75},{hpt:12.75},{hpt:29.25},{hpt:36},...Array(Math.max(0,matrix.length-4)).fill({hpt:24})];
  pv['!freeze']={xSplit:2,ySplit:4};XLSX.utils.book_append_sheet(wb,pv,'Database PV');
  const now=new Date(),stamp=now.getFullYear()+String(now.getMonth()+1).padStart(2,'0')+String(now.getDate()).padStart(2,'0');
  XLSX.writeFile(wb,'MECHASSET_PV_Database_'+stamp+'.xlsx');
