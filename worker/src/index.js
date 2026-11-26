@@ -347,12 +347,57 @@ export default {
     }
 
     // PV document and extracted-record persistence. Source binaries are never stored here.
-    if (url.pathname === '/api/pv/equipment' || url.pathname === '/api/pv/documents' || url.pathname === '/api/pv/intake' || url.pathname === '/api/pv/register' || url.pathname.startsWith('/api/pv/records/')) {
+    if (url.pathname === '/api/pv/equipment' || url.pathname === '/api/pv/documents' || url.pathname === '/api/pv/intake' || url.pathname.startsWith('/api/pv/intake/') || url.pathname === '/api/pv/register' || url.pathname.startsWith('/api/pv/records/')) {
       if (!env.DB) return json(request, { error: 'D1 binding DB is not configured.' }, 503);
       try {
         if (url.pathname === '/api/pv/equipment' && request.method === 'GET') {
           const result = await env.DB.prepare("SELECT id, module, tag, serial_number, equipment_name, owner_operator, location, identity_json FROM equipment WHERE module = 'PV' ORDER BY updated_at DESC LIMIT 500").all();
           return json(request, { ok: true, equipment: result.results || [], count: (result.results || []).length });
+        }
+        if (url.pathname === '/api/pv/intake' && request.method === 'GET') {
+          const status = String(url.searchParams.get('status') || 'pending_identification');
+          if (!['pending_identification', 'matched', 'rejected'].includes(status)) return json(request, { error: 'Invalid intake status.' }, 400);
+          const result = await env.DB.prepare(
+            'SELECT id, document_type, file_name, mime_type, extraction_model, record_json, status, created_at, updated_at FROM pv_intake_staging WHERE status = ? ORDER BY created_at DESC LIMIT 500'
+          ).bind(status).all();
+          const records = (result.results || []).map(row => ({ ...row, record: (() => { try { return JSON.parse(row.record_json); } catch { return {}; } })() }));
+          return json(request, { ok: true, records, count: records.length });
+        }
+        if (url.pathname.startsWith('/api/pv/intake/') && request.method === 'PUT') {
+          const stagingId = decodeURIComponent(url.pathname.slice('/api/pv/intake/'.length));
+          const body = await request.json();
+          const record = body.record;
+          const tag = String(body.equipment_tag || record?.equipment_tag || '').trim().slice(0, 300);
+          if (!stagingId || !tag || !record || typeof record !== 'object' || Array.isArray(record) || JSON.stringify(record).length > 60000) {
+            return json(request, { error: 'A source-verified equipment_tag and record object are required.' }, 400);
+          }
+          const staged = await env.DB.prepare("SELECT * FROM pv_intake_staging WHERE id = ? AND status = 'pending_identification'").bind(stagingId).first();
+          if (!staged) return json(request, { error: 'Pending PV intake record not found.' }, 404);
+          record.equipment_tag = tag;
+          let equipment = await env.DB.prepare(
+            "SELECT id, tag FROM equipment WHERE module = 'PV' AND lower(trim(tag)) = lower(trim(?)) LIMIT 1"
+          ).bind(tag).first();
+          let created = false;
+          if (!equipment) {
+            const equipmentId = crypto.randomUUID();
+            const identity = Object.fromEntries(Object.entries(record).filter(([key, value]) => !key.startsWith('_') && value !== null && value !== ''));
+            await env.DB.prepare(
+              "INSERT INTO equipment (id, module, tag, serial_number, equipment_name, owner_operator, location, identity_json) VALUES (?, 'PV', ?, ?, ?, ?, ?, ?)"
+            ).bind(equipmentId, tag, record.serial_number || null, record.equipment_name || null, record.owner_operator || null, record.location || null, JSON.stringify({ ...identity, _registration_status: 'draft', _registration_source: staged.file_name })).run();
+            equipment = { id: equipmentId, tag };
+            created = true;
+          }
+          const documentId = crypto.randomUUID();
+          await env.DB.batch([
+            env.DB.prepare(
+              'INSERT INTO pv_documents (id, equipment_id, document_type, file_name, mime_type, extraction_model) VALUES (?, ?, ?, ?, ?, ?)'
+            ).bind(documentId, equipment.id, staged.document_type, staged.file_name, staged.mime_type, staged.extraction_model),
+            env.DB.prepare(
+              "INSERT INTO pv_extracted_records (id, document_id, equipment_id, record_type, record_json) VALUES (?, ?, ?, 'document', ?)"
+            ).bind(crypto.randomUUID(), documentId, equipment.id, JSON.stringify(record)),
+            env.DB.prepare("UPDATE pv_intake_staging SET status = 'matched', record_json = ?, updated_at = strftime('%Y-%m-%dT%H:%M:%fZ', 'now') WHERE id = ?").bind(JSON.stringify(record), stagingId)
+          ]);
+          return json(request, { ok: true, status: created ? 'draft_created' : 'matched_existing', equipment_id: equipment.id, equipment_tag: equipment.tag, document_id: documentId });
         }
         if (url.pathname === '/api/pv/intake' && request.method === 'POST') {
           const body = await request.json();
