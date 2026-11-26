@@ -53,13 +53,21 @@ function mergedDoc(rows){const out={};for(const r of rows){for(const [k,v] of Ob
 function isUtMeasurement(r){const rec=r.record||{};return ['previous_ut','last_ut'].includes(r.record_type)&&(hasValue(rec.component)||hasValue(rec.thickness_reading)||hasValue(rec.measurement_location)||hasValue(rec.measurement_point))}
 const cols=[['Part','component'],['Equipment Name','equipment_name'],['Owner / Operator','owner_operator'],['Location / Platform','location'],['PV Type','equipment_type'],['Serial No.','serial_number'],['Manufacturer','manufacturer'],['Model','model'],['Diameter','diameter'],['Diameter Unit','diameter_unit'],['Length','length_or_height'],['Length Unit','length_unit'],['Height/Width','height_wide'],['Height Unit','height_wide_unit'],['Corrosion Allowance','corrosion_allowance'],['Design Code','design_code'],['Design Pressure','design_pressure'],['Design Temperature','design_temperature'],['MAWP','mawp'],['Shell Material','material_shell'],['Head Material','material_head'],['Nominal Thickness','nominal_thickness'],['Report Date','report_date'],['Inspection Date','inspection_date'],['Measurement Location','measurement_location'],['Measurement Point','measurement_point'],['Thickness Reading','thickness_reading'],['Thickness Unit','thickness_unit'],['Corrosion Rate','corrosion_rate'],['Remaining Life','remaining_life'],['Remarks','remarks'],['Source Document','_source_file']];
 function renderCombined(){
- const groups=equipment.map(eq=>{
-  const all=records.filter(r=>r.equipment_id===eq.id);
-  const base=mergedDoc([{record:equipmentIdentity(eq)},...all]);
+ const buckets=new Map();
+ equipment.forEach(eq=>{
+  const key=String(eq.tag||'').trim().toLowerCase()||('id:'+eq.id);
+  if(!buckets.has(key))buckets.set(key,{eq,items:[]});
+  buckets.get(key).items.push(eq);
+ });
+ const groups=[...buckets.values()].map(bucket=>{
+  const ids=new Set(bucket.items.map(e=>String(e.id)));
+  const all=records.filter(r=>ids.has(String(r.equipment_id)));
+  const identityRows=bucket.items.map(e=>({record:equipmentIdentity(e)}));
+  const base=mergedDoc([...identityRows,...all.filter(r=>r.record_type==='document')]);
   const ut=all.filter(isUtMeasurement);
-  const displayRows=ut.length?ut:all.filter(r=>r.record_type==='document');
-  const rows=displayRows.length?displayRows:[{record_id:'',record_type:'document',record:base}];
-  return {eq,base,rows};
+  const docs=all.filter(r=>r.record_type==='document');
+  const rows=ut.length?ut:(docs.length?docs:[{record_id:'',record_type:'document',record:base}]);
+  return {eq:bucket.items[0],items:bucket.items,all,base,rows};
  }).filter(g=>g.rows.length);
  if(!groups.length){$('records').innerHTML='<div class="rv-empty">No PV records found. Scan a Datasheet or UT report first.</div>';return}
  let n=0;
