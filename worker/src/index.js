@@ -677,7 +677,7 @@ export default {
         if (url.pathname === '/api/extract/pv-document') {
           const records = (Array.isArray(result.records) ? result.records : []).map((record) => {
             const output = {};
-            for (const key of ['equipment_tag','equipment_name','equipment_type','manufacturer','model','serial_number','year_built','owner_operator','location','design_code','design_pressure','design_temperature','mawp','operating_pressure','operating_temperature','volume','diameter','length_or_height','material_shell','material_head','corrosion_allowance','nominal_thickness','inspection_date','inspection_summary','document_reference']) {
+            for (const key of ['equipment_tag','equipment_name','equipment_type','manufacturer','model','serial_number','year_built','date_built','year_used','owner_operator','location','design_code','design_pressure','design_temperature','mawp','operating_pressure','operating_temperature','volume','diameter','length_or_height','material_shell','material_head','corrosion_allowance','nominal_thickness','inspection_date','inspection_summary','document_reference']) {
               output[key] = record?.[key] ?? null;
             }
             output._source_location = record?._source_location ?? null;
