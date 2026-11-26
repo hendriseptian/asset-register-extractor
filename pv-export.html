@@ -75,7 +75,7 @@ function exportWorkbook(){
    if(normalizeTag(value)===tagKey)continue;
    serialCounts.set(value,(serialCounts.get(value)||0)+1);
   }
-  const canonicalSerial=[...serialCounts.entries()].sort((a,b)=>b[1]-a[1])[0]?.[0]||g.e?.serial_number||g.doc?.serial_number||'';
+  const canonicalSerial=[...serialCounts.entries()].sort((a,b)=>b[1]-a[1])[0]?.[0]||'';
   const previousRows=g.rows.filter(x=>x.record_type==='previous_ut'),lastRows=g.rows.filter(x=>x.record_type==='last_ut');
   const docs=g.rows.filter(x=>!['previous_ut','last_ut'].includes(x.record_type));
   const partMap=new Map();
