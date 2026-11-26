@@ -157,6 +157,8 @@ function applyEdits(recordId,record){const edits=readEdits()[String(recordId||''
 function valueFor(key,rec,eq,base,row,index){
  if(key==='A')return index+1;
  if(key==='B')return eq.tag||base.equipment_tag||rec.equipment_tag||'';
+ if(key==='Q')return normalizeJointEfficiency(rec).joint_efficiency;
+ if(key==='R')return normalizeJointEfficiency(rec).radiography;
  // Resolve the column letter to its canonical data field, then fall back to D1 equipment identity.
  const field=cols.find(column=>column[0]===key)?.[2];
  if(field){
