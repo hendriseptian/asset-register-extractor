@@ -20,6 +20,11 @@ function normalizeTag(value) {
   return String(value ?? '').normalize('NFKC').toLowerCase().replace(/[^a-z0-9]/g, '');
 }
 
+// Dedicated helper for the PV extraction endpoint to avoid route-local name shadowing.
+function normalizePvTag(value) {
+  return String(value ?? '').normalize('NFKC').toLowerCase().replace(/[^a-z0-9]/g, '');
+}
+
 function getAllowedOrigin(request) {
   const origin = request.headers.get('Origin');
   if (!origin) return null;
@@ -674,7 +679,7 @@ export default {
               output.report_date = null;
             }
             // Reject the common extraction error where Item/Tag No. is copied into Serial No.
-            if (output.equipment_tag && output.serial_number && normalizeTag(output.equipment_tag) === normalizeTag(output.serial_number)) {
+            if (output.equipment_tag && output.serial_number && normalizePvTag(output.equipment_tag) === normalizePvTag(output.serial_number)) {
               output.serial_number = null;
             }
             output._source_location = record?._source_location ?? null;
