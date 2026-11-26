@@ -72,16 +72,18 @@ function exportWorkbook(){
    const rec=source.record||{},part=String(rec.component||rec.part||rec.measurement_point||rec.identification||'').trim();
    if(!part)continue;
    const key=normalizeTag(part);
-   if(!partMap.has(key))partMap.set(key,{part,previous:[],last:[]});
+   if(!partMap.has(key))partMap.set(key,{part,previous:[],last:[],documents:[]});
    if(source.record_type==='previous_ut')partMap.get(key).previous.push(source);
    else if(source.record_type==='last_ut')partMap.get(key).last.push(source);
+   else partMap.get(key).documents.push(source);
   }
   const newest=list=>list.slice().sort((a,b)=>String(b.created_at||b.document_created_at||'').localeCompare(String(a.created_at||a.document_created_at||'')))[0];
   let display;
   if(partMap.size){
    display=[...partMap.values()].map(part=>{
     const prevRow=newest(part.previous),lastRow=newest(part.last),prevRec=prevRow?.record||{},lastRec=lastRow?.record||{};
-    const combined={...g.doc,...prevRec,...lastRec,component:part.part,
+    const partDoc=part.documents.reduce((acc,item)=>({...acc,...(item.record||{})}),{});
+    const combined={...g.doc,...partDoc,...prevRec,...lastRec,component:part.part,
      previous_thickness:prevRec.thickness_reading??prevRec.previous_thickness??'',
      actual_thickness:lastRec.thickness_reading??lastRec.actual_thickness??'',
      previous_inspection:exportYear(prevRec.inspection_date||prevRec.report_date),
