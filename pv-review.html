@@ -135,8 +135,8 @@ function valueFor(key,rec,eq,base,row,index){
  if(key==='X')return rec.last_inspection??rec.last_inspection_year??'';
  if(key==='Y')return normalizeRegisterDate(rec.inspection_date??'');
  if(key==='Z')return rec.nominal_thickness??'';
- if(key==='AA')return rec.previous_thickness??'';
- if(key==='AB')return rec.actual_thickness??(row.record_type==='previous_ut'||row.record_type==='last_ut'?rec.thickness_reading:'')??'';
+ if(key==='AA')return row.record_type==='previous_ut'?(rec.thickness_reading??rec.previous_thickness??''):(rec.previous_thickness??'');
+ if(key==='AB')return row.record_type==='last_ut'?(rec.thickness_reading??rec.actual_thickness??''):(rec.actual_thickness??'');
  if(key==='AC')return rec.design_pressure??'';
  if(key==='AD')return rec.mawp??'';
  if(key==='AE')return rec.hydrotest_pressure??'';
