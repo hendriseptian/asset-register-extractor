@@ -91,17 +91,31 @@ function normalizeRegisterDate(value){
  if(m){const months={jan:'01',feb:'02',mar:'03',apr:'04',may:'05',jun:'06',jul:'07',aug:'08',sep:'09',oct:'10',nov:'11',dec:'12'};const mm=months[m[2].slice(0,3).toLowerCase()];if(mm)return m[1].padStart(2,'0')+'/'+mm+'/'+m[3]}
  return s;
 }
-function yearFromDate(value){const d=normalizeRegisterDate(value);const m=d.match(/(?:^|\/)(\d{4})$/);return m?m[1]:''}
+function yearFromDate(value){
+ if(value&&typeof value==='object'){for(const k of ['inspection_date','inspectionDate','report_date','reportDate','date_of_inspection','date']){const y=yearFromDate(value[k]);if(y)return y}return ''}
+ const d=normalizeRegisterDate(value),m=d.match(/(?:^|\/)(\d{4})$/);if(m)return m[1];
+ const year=String(value??'').match(/\b(19|20)\d{2}\b/);return year?year[0]:'';
+}
 function normalizeBuildYears(record,sourceRecords=[]){
  const out={...record};
  const candidates=sourceRecords.map(recordObject).concat([out]);
- const pair=candidates.map(r=>String(r.year_built??r.built_used??r.year_built_used??'').trim()).find(v=>/^\d{4}\s*\/\s*\d{4}$/.test(v));
+ const pairKeys=['year_built','built_used','year_built_used','built_year_used','built_year','year'];
+ let pair='';
+ for(const r of candidates){for(const key of pairKeys){const value=String(r?.[key]??'').trim();if(/^\d{4}\s*\/\s*\d{4}$/.test(value)){pair=value;break}}if(pair)break}
  if(pair){const parts=pair.split('/').map(v=>v.trim());out.year_built=parts[0];out.year_used=parts[1]}
- const built=String(out.year_built??'').trim();
- if(/^\d{4}\s*\/\s*\d{4}$/.test(built)){const parts=built.split('/').map(v=>v.trim());out.year_built=parts[0];if(!hasValue(out.year_used))out.year_used=parts[1]}
- if(!hasValue(out.year_used)&&/^\d{4}$/.test(String(out.date_built??'').trim()))out.year_used=String(out.date_built).trim();
+ if(/^\d{4}\s*\/\s*\d{4}$/.test(String(out.year_built??'').trim())){const parts=String(out.year_built).split('/').map(v=>v.trim());out.year_built=parts[0];if(!hasValue(out.year_used))out.year_used=parts[1]}
+ if(!hasValue(out.year_used)){
+  const used=candidates.map(r=>r.year_used??r.used_year??r.year_commissioned??r.commissioning_year).find(v=>/^\d{4}$/.test(String(v??'').trim()));
+  if(hasValue(used))out.year_used=String(used).trim();
+ }
  if(!hasValue(out.date_built)&&/^\d{4}$/.test(String(out.year_built??'').trim()))out.date_built='01/01/'+out.year_built;
  return out;
+}
+function reportDateOf(record){
+ for(const key of ['inspection_date','inspectionDate','date_of_inspection','date_inspected','report_date','reportDate','date_of_report','reporting_date','inspection_period','report_period']){
+  const value=record?.[key];if(hasValue(value)){const year=yearFromDate(value);if(year)return value}
+ }
+ return '';
 }
 function mergedDoc(rows){const out={};for(const r of rows){for(const [k,v] of Object.entries(recordObject(r))){if(!k.startsWith('_')&&hasValue(v)&&(out[k]===undefined||!hasValue(out[k])))out[k]=v}}return out}
 function isUtMeasurement(r){const rec=recordObject(r);return ['previous_ut','last_ut'].includes(r.record_type)&&(hasValue(rec.component)||hasValue(rec.thickness_reading)||hasValue(rec.measurement_location)||hasValue(rec.measurement_point))}
@@ -173,11 +187,13 @@ function renderCombined(){
   const base=normalizeBuildYears(mergedDoc(sourceRecords),sourceRecords);
   const latestUt=(type)=>all.filter(r=>r.record_type===type).slice().sort((a,b)=>String(b.created_at||b.document_created_at||'').localeCompare(String(a.created_at||a.document_created_at||''))).map(r=>({...r,record:recordObject(r)}));
   const previousReports=latestUt('previous_ut'),lastReports=latestUt('last_ut');
-  const previousReport=previousReports.map(r=>r.record).find(r=>hasValue(r.inspection_date)||hasValue(r.report_date))||{};
-  const lastReport=lastReports.map(r=>r.record).find(r=>hasValue(r.inspection_date)||hasValue(r.report_date))||{};
-  base.previous_inspection=yearFromDate(previousReport.inspection_date||previousReport.report_date);
-  base.last_inspection=yearFromDate(lastReport.inspection_date||lastReport.report_date);
-  base.inspection_date=normalizeRegisterDate(lastReport.inspection_date||lastReport.report_date);
+  const previousDates=previousReports.map(r=>reportDateOf(r.record)).filter(hasValue);
+  const lastDates=lastReports.map(r=>reportDateOf(r.record)).filter(hasValue);
+  const previousDate=previousDates[0]||'';
+  const lastDate=lastDates[0]||'';
+  base.previous_inspection=yearFromDate(previousDate);
+  base.last_inspection=yearFromDate(lastDate);
+  base.inspection_date=normalizeRegisterDate(lastDate);
   const eq={...bucket.eq};
   for(const item of bucket.items){
    for(const field of ['equipment_name','serial_number','owner_operator','location','tag'])if(!hasValue(eq[field])&&hasValue(item.eq?.[field]))eq[field]=item.eq[field];
