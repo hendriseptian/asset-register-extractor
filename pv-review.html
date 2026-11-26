@@ -71,9 +71,11 @@ function normalizeEquipmentTag(v){return String(v??'').normalize('NFKC').toLower
 function recordObject(row){
  let value=row?.record;
  if(typeof value==='string'){try{value=JSON.parse(value)}catch{value={}}}
- if(!value||typeof value!=='object'||Array.isArray(value)){try{value=JSON.parse(row?.record_json||'{}')}catch{value={}}}
+ if(!value||typeof value!=='object'||Array.isArray(value)||Object.keys(value).length===0){
+  try{const raw=JSON.parse(row?.record_json||'{}');if(raw&&typeof raw==='object'&&!Array.isArray(raw))value=raw}catch{}
+ }
  if(!value||typeof value!=='object'||Array.isArray(value))value={};
- for(const key of ['fields','data','extracted_data','measurement'])if(value[key]&&typeof value[key]==='object'&&!Array.isArray(value[key]))value={...value,...value[key]};
+ for(const key of ['record','fields','data','extracted_data','measurement','result'])if(value[key]&&typeof value[key]==='object'&&!Array.isArray(value[key]))value={...value,...value[key]};
  const aliases={equipment_tag:['equipment_tag','tag_pv','tag'],equipment_name:['equipment_name','name_of_equipment'],equipment_type:['equipment_type','pv_type'],owner_operator:['owner_operator','owner','operator'],location:['location','location_platform','platform'],serial_number:['serial_number','serial_no'],manufacturer:['manufacturer','manufacture'],component:['component','part','part_name','component_name','identification'],thickness_reading:['thickness_reading','least_point','least_point_mm','minimum_thickness','min_thickness','actual_thickness'],measurement_location:['measurement_location','location_of_measurement'],measurement_point:['measurement_point','point_of_measurement']};
  for(const [target,names] of Object.entries(aliases))if(!hasValue(value[target])){const found=names.map(k=>value[k]).find(hasValue);if(hasValue(found))value[target]=found}
  return value;
