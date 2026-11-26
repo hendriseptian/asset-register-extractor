@@ -507,7 +507,7 @@ export default {
           const equipment = await env.DB.prepare("SELECT id, tag, serial_number, equipment_name, owner_operator, location, identity_json FROM equipment WHERE id = ? AND module = 'PV'").bind(equipmentId).first();
           if (!equipment) return json(request, { error: 'PV equipment not found.' }, 404);
           const result = await env.DB.prepare(
-            'SELECT d.id AS document_id, d.document_type, d.period, d.file_name, d.extraction_model, d.created_at AS document_created_at, r.id AS record_id, r.record_type, r.record_json, r.review_status, r.created_at, r.updated_at FROM pv_documents d JOIN pv_extracted_records r ON r.document_id = d.id WHERE d.equipment_id = ? ORDER BY d.created_at DESC, r.created_at ASC LIMIT 5000'
+            'SELECT d.id AS document_id, d.document_type, d.period, d.file_name, d.extraction_model, d.created_at AS document_created_at, r.id AS record_id, r.equipment_id, r.record_type, r.record_json, r.review_status, r.created_at, r.updated_at FROM pv_documents d JOIN pv_extracted_records r ON r.document_id = d.id WHERE d.equipment_id = ? ORDER BY d.created_at DESC, r.created_at ASC LIMIT 5000'
           ).bind(equipmentId).all();
           const records = (result.results || []).map(row => ({ ...row, record: (() => { try { return JSON.parse(row.record_json); } catch { return {}; } })() }));
           return json(request, { ok: true, equipment, records, count: records.length });
