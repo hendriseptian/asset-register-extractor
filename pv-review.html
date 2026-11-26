@@ -20,6 +20,18 @@
 @media(max-width:760px){
  .main-content{width:100%;max-width:100%;margin:0;padding:22px 14px 36px}
 }
+
+/* FULL-WINDOW PV REVIEW WORKSPACE */
+html,body{width:100%;min-width:0;margin:0}
+.app-shell{display:flex!important;width:100%!important;max-width:none!important;min-width:0!important;margin:0!important;padding:0!important;gap:0!important}
+.app-shell>.sidebar{flex:0 0 174px!important;width:174px!important}
+.app-shell>.main-content{display:flex!important;flex-direction:column!important;flex:1 1 0!important;width:calc(100% - 174px)!important;max-width:none!important;min-width:0!important;margin:0!important;padding:16px 18px 18px!important;box-sizing:border-box!important}
+.main-content>.topbar,.main-content>section.panel,.main-content>.site-footer{width:100%!important;max-width:none!important;min-width:0!important;box-sizing:border-box!important}
+.main-content>section.panel:nth-of-type(2){display:flex!important;flex:1 1 auto!important;flex-direction:column!important;min-height:calc(100vh - 205px)!important;margin-bottom:0!important}
+.main-content>section.panel:nth-of-type(2) #records{display:flex;flex:1 1 auto;flex-direction:column;min-height:0;width:100%}
+.main-content>section.panel:nth-of-type(2) .rv-table-wrap{flex:1 1 auto!important;width:100%!important;max-width:none!important;min-width:0!important;min-height:calc(100vh - 330px)!important;max-height:none!important;overflow:auto!important;box-sizing:border-box!important}
+.rv-excel-table{width:max-content!important;min-width:2600px!important}
+@media(max-width:760px){.app-shell>.sidebar{flex-basis:100%!important;width:100%!important}.app-shell>.main-content{width:100%!important;padding:14px!important}.main-content>section.panel:nth-of-type(2) .rv-table-wrap{min-height:65vh!important}}
 </style></head><body><div class="app-shell"><aside class="sidebar"><div class="sidebar-brand"><img class="brand-logo small" src="assets/mechasset-logo.svg" alt="MECHASSET"><div><b>MECHASSET</b><small>Mechanical Asset Management</small></div></div><nav><a href="pv-dashboard.html">Dashboard</a><a href="pv-documents.html">Documents Extraction</a><a href="pv-ut.html?period=previous">Extract Previous UT</a><a href="pv-ut.html?period=last">Extract Last UT</a><a class="active" href="pv-review.html">Mapping &amp; Review</a><a href="pv-register.html">PV Asset Register</a><a href="pv-export.html">Export Excel</a></nav><div class="sidebar-bottom"><a href="dashboard.html">← Equipment selection</a><a href="index.html">Settings / Worker URL</a></div></aside>
 <main class="main-content"><header class="topbar"><div><p class="eyebrow">MECHASSET · PRESSURE VESSEL</p><h1>Mapping &amp; Review</h1><p class="muted">Review extracted Datasheet and UT readings in an Excel-style table. Changes are saved to D1.</p></div><a class="text-link" href="pv-dashboard.html">Back to PV dashboard</a></header>
 <section class="panel"><div class="panel-heading"><div><p class="eyebrow">DATABASE REVIEW</p><h2>Extraction Summary</h2></div><div class="rv-toolbar"><button id="reload" class="btn secondary">Reload from D1</button><button id="delete-all" class="btn secondary" style="background:#8f2f36;color:#fff;border-color:#8f2f36">Delete All Data</button></div></div><div class="rv-summary"><div class="rv-kpi"><small>Equipment documents</small><strong id="docs-count">0</strong></div><div class="rv-kpi"><small>UT measurement rows</small><strong id="ut-count">0</strong></div><div class="rv-kpi"><small>Rows reviewed</small><strong id="reviewed-count">0</strong></div><div class="rv-kpi"><small>Pending identification</small><strong id="pending-count">0</strong></div></div><div id="notice" class="rv-alert" style="margin-top:14px">Connecting to database…</div></section>
