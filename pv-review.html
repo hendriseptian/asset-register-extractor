@@ -13,7 +13,39 @@ const fields={documents:['equipment_tag','equipment_name','equipment_type','manu
 const labels={equipment_tag:'Equipment Tag',equipment_name:'Equipment Name',equipment_type:'Equipment Type',manufacturer:'Manufacturer',model:'Model',serial_number:'Serial Number',year_built:'Year Built',owner_operator:'Owner / Operator',location:'Location',design_code:'Design Code',design_pressure:'Design Pressure',design_temperature:'Design Temperature',mawp:'MAWP',operating_pressure:'Operating Pressure',operating_temperature:'Operating Temperature',volume:'Volume',diameter:'Diameter',length_or_height:'Length / Height',material_shell:'Shell Material',material_head:'Head Material',corrosion_allowance:'Corrosion Allowance',nominal_thickness:'Nominal Thickness',inspection_date:'Inspection Date',inspection_summary:'Inspection Summary',document_reference:'Document Reference',report_date:'Report Date',component:'Component',measurement_location:'Measurement Location',measurement_point:'Measurement Point',thickness_reading:'Thickness Reading',thickness_unit:'Thickness Unit',corrosion_rate:'Corrosion Rate',remaining_life:'Remaining Life',remarks:'Remarks'};
 const esc=v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 async function api(path,options={}){const base=workerUrl();if(!/^https:\/\//i.test(base))throw new Error('Worker URL is not configured. Open Settings / Worker URL.');const res=await fetch(base+path,{cache:'no-store',...options});let data={};try{data=await res.json()}catch{}if(!res.ok)throw new Error(data.error||'HTTP '+res.status);return data}
-async function load(){const reloadBtn=$('reload');reloadBtn.disabled=true;reloadBtn.textContent='Loading…';$('notice').textContent='Connecting to Cloudflare Worker and reloading records from D1…';try{const e=await api('/api/pv/equipment');equipment=e.equipment||[];const regs=await Promise.all(equipment.map(x=>api('/api/pv/register?equipment_id='+encodeURIComponent(x.id))));records=regs.flatMap(reg=>reg.records||[]);const p=await api('/api/pv/intake?status=pending_identification');pending=p.records||[];updateSummary();render();$('notice').textContent='Loaded '+records.length+' extracted row(s) and '+pending.length+' pending item(s) from D1.';if(params.has('refresh'))$('notice').textContent='Latest extraction loaded automatically from D1. '+records.length+' saved record(s), '+pending.length+' pending identification item(s).'}catch(err){$('notice').textContent='Load failed: '+err.message;$('records').innerHTML='<div class="rv-empty">'+esc(err.message)+'</div>'}finally{reloadBtn.disabled=false;reloadBtn.textContent='Reload from D1'}}
+async function load(){
+ const reloadBtn=$('reload');
+ reloadBtn.disabled=true;
+ reloadBtn.textContent='Loading…';
+ $('notice').textContent='Connecting to Cloudflare Worker and reloading records from D1…';
+ records=[];equipment=[];pending=[];
+ try{
+  const e=await api('/api/pv/equipment');
+  equipment=Array.isArray(e.equipment)?e.equipment:[];
+  const settled=await Promise.allSettled(equipment.map(eq=>api('/api/pv/register?equipment_id='+encodeURIComponent(eq.id))));
+  const failed=[];
+  settled.forEach((result,index)=>{
+   if(result.status==='fulfilled'&&Array.isArray(result.value.records))records.push(...result.value.records);
+   else failed.push((equipment[index]?.tag||equipment[index]?.id||'Unknown')+': '+(result.reason?.message||'Register request failed'));
+  });
+  try{
+   const p=await api('/api/pv/intake?status=pending_identification');
+   pending=Array.isArray(p.records)?p.records:[];
+  }catch(err){failed.push('Pending Identification: '+err.message)}
+  updateSummary();
+  render();
+  let message='Loaded '+records.length+' extracted row(s) across '+equipment.length+' PV equipment(s), and '+pending.length+' pending item(s) from D1.';
+  if(failed.length)message+=' Some requests failed: '+failed.join(' | ');
+  $('notice').textContent=message;
+  if(params.has('refresh'))$('notice').textContent='Latest extraction loaded from D1. '+message;
+ }catch(err){
+  $('notice').textContent='Load failed: '+err.message;
+  $('records').innerHTML='<div class="rv-empty">'+esc(err.message)+'</div>';
+ }finally{
+  reloadBtn.disabled=false;
+  reloadBtn.textContent='Reload from D1';
+ }
+}
 function updateSummary(){$('docs-count').textContent=records.filter(r=>r.record_type==='document').length;$('ut-count').textContent=records.filter(r=>['previous_ut','last_ut'].includes(r.record_type)).length;$('reviewed-count').textContent=records.filter(r=>r.review_status==='reviewed').length;$('pending-count').textContent=pending.length}
 function equipmentIdentity(eq){try{return typeof eq.identity_json==='string'?JSON.parse(eq.identity_json||'{}'):(eq.identity_json||{})}catch{return {}}}
 function mergedDoc(rows){const out={};for(const r of rows.filter(x=>x.record_type==='document'))for(const [k,v] of Object.entries(r.record||{})){if(!k.startsWith('_')&&v!==null&&v!==''&&(out[k]===undefined||out[k]===''))out[k]=v}return out}
