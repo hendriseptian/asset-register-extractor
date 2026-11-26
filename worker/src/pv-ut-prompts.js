@@ -23,7 +23,7 @@ export function buildPvUtPrompt(utPeriod, equipment, fileName) {
     'Return ONLY valid JSON: ' + JSON.stringify({ records: [row] }),
     'Rules:',
     '1. Return EXACTLY one record per distinct PART / component for each inspection date and report. Do NOT return one record per angle or measurement point.',
-    '2. Extract only values explicitly printed in the source. Missing, unclear, or illegible values must be null. Never guess, interpolate, calculate, or infer.',
+    '2. Extract only values explicitly printed in the source. The ONLY permitted calculation is selecting the minimum among valid numeric UT readings within the same Part when no explicit LEAST POINT value is printed. Do not average, interpolate, extrapolate, or infer missing readings. Missing, unclear, or illegible values must be null.',
     '3. For each Part (for example Shell 1, Shell 2, Shell 3, Top Head 1, Nozzle N1), extract ONLY ONE thickness value: the LEAST POINT / minimum thickness for that Part. Prefer the explicitly printed LEAST POINT column when present. If no LEAST POINT column exists, compare all valid numeric UT readings belonging to that same Part and select the smallest value. Ignore N/A, blank cells, headers, and non-numeric text. Never compare readings across different Parts.',
     '4. Do not create or populate nominal thickness. UT reports often do not state nominal thickness; leave it null / do not include a nominal_thickness field.',
     '5. thickness_reading must contain only the Part-level least-point value selected by Rule 3. Do not return individual 0°, 90°, 180° or other angle readings as separate records. Do not substitute nominal thickness, corrosion allowance, or design thickness.',
