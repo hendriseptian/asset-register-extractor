@@ -116,7 +116,7 @@ function normalizeBuildYears(record,sourceRecords=[]){
   const used=candidates.map(r=>r.year_used??r.used_year??r.year_of_use??r.year_in_service??r.commissioning_year??r.year_commissioned??r.date_used).find(v=>/^\d{4}$/.test(String(v??'').trim()));
   if(hasValue(used))out.year_used=String(used).trim();
  }
- if(!hasValue(out.date_built)&&/^\d{4}$/.test(String(out.year_built??'').trim()))out.date_built='01/01/'+out.year_built;
+ // Do not invent a day/month for Date Built; retain only a source-extracted date.
  return out;
 }
 function reportDateOf(record){
