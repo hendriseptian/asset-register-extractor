@@ -374,6 +374,8 @@ export default {
           const staged = await env.DB.prepare("SELECT * FROM pv_intake_staging WHERE id = ? AND status = 'pending_identification'").bind(stagingId).first();
           if (!staged) return json(request, { error: 'Pending PV intake record not found.' }, 404);
           record.equipment_tag = tag;
+          const recordType = ['previous_ut', 'last_ut'].includes(record._record_type) ? record._record_type : 'document';
+          delete record._record_type;
           let equipment = await env.DB.prepare(
             "SELECT id, tag FROM equipment WHERE module = 'PV' AND lower(trim(tag)) = lower(trim(?)) LIMIT 1"
           ).bind(tag).first();
@@ -402,15 +404,18 @@ export default {
               'INSERT INTO pv_documents (id, equipment_id, document_type, file_name, mime_type, extraction_model) VALUES (?, ?, ?, ?, ?, ?)'
             ).bind(documentId, equipment.id, staged.document_type, staged.file_name, staged.mime_type, staged.extraction_model),
             env.DB.prepare(
-              "INSERT INTO pv_extracted_records (id, document_id, equipment_id, record_type, record_json) VALUES (?, ?, ?, 'document', ?)"
-            ).bind(crypto.randomUUID(), documentId, equipment.id, JSON.stringify(record)),
+              "INSERT INTO pv_extracted_records (id, document_id, equipment_id, record_type, record_json) VALUES (?, ?, ?, ?, ?)"
+            ).bind(crypto.randomUUID(), documentId, equipment.id, recordType, JSON.stringify(record)),
             env.DB.prepare("UPDATE pv_intake_staging SET status = 'matched', record_json = ?, updated_at = strftime('%Y-%m-%dT%H:%M:%fZ', 'now') WHERE id = ?").bind(JSON.stringify(record), stagingId)
           ]);
           return json(request, { ok: true, status: created ? 'draft_created' : 'matched_existing', equipment_id: equipment.id, equipment_tag: equipment.tag, document_id: documentId });
         }
         if (url.pathname === '/api/pv/intake' && request.method === 'POST') {
           const body = await request.json();
-          const documentType = String(body.document_type || 'Other Supporting Documents').slice(0, 100);
+          const recordType = String(body.record_type || 'document');
+          if (!['document', 'previous_ut', 'last_ut'].includes(recordType)) return json(request, { error: 'record_type must be document, previous_ut, or last_ut.' }, 400);
+          const defaultDocumentType = recordType === 'previous_ut' ? 'Previous UT' : recordType === 'last_ut' ? 'Last UT' : 'Other Supporting Documents';
+          const documentType = String(body.document_type || defaultDocumentType).slice(0, 100);
           const fileName = String(body.file_name || '').slice(0, 255);
           const mimeType = String(body.mime_type || '').slice(0, 100) || null;
           const modelName = String(body.extraction_model || '').slice(0, 100) || null;
@@ -428,7 +433,7 @@ export default {
               const stagingId = crypto.randomUUID();
               await env.DB.prepare(
                 'INSERT INTO pv_intake_staging (id, document_type, file_name, mime_type, extraction_model, record_json) VALUES (?, ?, ?, ?, ?, ?)'
-              ).bind(stagingId, documentType, fileName, mimeType, modelName, JSON.stringify(record)).run();
+              ).bind(stagingId, documentType, fileName, mimeType, modelName, JSON.stringify({ ...record, _record_type: recordType })).run();
               outcomes.push({ status: 'pending_identification', staging_id: stagingId, equipment_tag: null });
               continue;
             }
@@ -460,8 +465,8 @@ export default {
                 'INSERT INTO pv_documents (id, equipment_id, document_type, file_name, mime_type, extraction_model) VALUES (?, ?, ?, ?, ?, ?)'
               ).bind(documentId, equipment.id, documentType, fileName, mimeType, modelName),
               env.DB.prepare(
-                "INSERT INTO pv_extracted_records (id, document_id, equipment_id, record_type, record_json) VALUES (?, ?, ?, 'document', ?)"
-              ).bind(crypto.randomUUID(), documentId, equipment.id, JSON.stringify(record))
+                "INSERT INTO pv_extracted_records (id, document_id, equipment_id, record_type, record_json) VALUES (?, ?, ?, ?, ?)"
+              ).bind(crypto.randomUUID(), documentId, equipment.id, recordType, JSON.stringify(record))
             ]);
             outcomes.push({ status: created ? 'draft_created' : 'matched_existing', equipment_id: equipment.id, equipment_tag: equipment.tag, document_id: documentId });
           }
