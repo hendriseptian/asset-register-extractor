@@ -347,7 +347,7 @@ export default {
     }
 
     // PV document and extracted-record persistence. Source binaries are never stored here.
-    if (url.pathname === '/api/pv/equipment' || url.pathname === '/api/pv/documents' || url.pathname === '/api/pv/intake' || url.pathname.startsWith('/api/pv/intake/') || url.pathname === '/api/pv/register' || url.pathname.startsWith('/api/pv/records/')) {
+    if (url.pathname === '/api/pv/equipment' || url.pathname === '/api/pv/documents' || url.pathname === '/api/pv/intake' || url.pathname.startsWith('/api/pv/intake/') || url.pathname === '/api/pv/register' || url.pathname === '/api/pv/records' || url.pathname.startsWith('/api/pv/records/')) {
       if (!env.DB) return json(request, { error: 'D1 binding DB is not configured.' }, 503);
       try {
         if (url.pathname === '/api/pv/equipment' && request.method === 'GET') {
@@ -514,6 +514,23 @@ export default {
           ).bind(equipmentId).all();
           const records = (result.results || []).map(row => ({ ...row, record: (() => { try { return JSON.parse(row.record_json); } catch { return {}; } })() }));
           return json(request, { ok: true, equipment, records, count: records.length });
+        }
+
+        if (url.pathname === '/api/pv/records' && request.method === 'DELETE') {
+          const counts = await Promise.all([
+            env.DB.prepare('SELECT COUNT(*) AS n FROM pv_extracted_records').first(),
+            env.DB.prepare('SELECT COUNT(*) AS n FROM pv_documents').first(),
+            env.DB.prepare("SELECT COUNT(*) AS n FROM equipment WHERE module = 'PV'").first(),
+            env.DB.prepare('SELECT COUNT(*) AS n FROM pv_intake_staging').first()
+          ]);
+          const totals = counts.map(x => Number(x?.n || 0));
+          await env.DB.batch([
+            env.DB.prepare('DELETE FROM pv_extracted_records'),
+            env.DB.prepare('DELETE FROM pv_documents'),
+            env.DB.prepare('DELETE FROM pv_intake_staging'),
+            env.DB.prepare("DELETE FROM equipment WHERE module = 'PV'")
+          ]);
+          return json(request, { ok: true, deleted_records: totals[0], deleted_documents: totals[1], deleted_equipment: totals[2], deleted_pending: totals[3] });
         }
 
         if (url.pathname.startsWith('/api/pv/records/') && request.method === 'DELETE') {
