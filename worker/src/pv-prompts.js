@@ -5,7 +5,7 @@ export function buildPvDocumentPrompt(documentType, equipment, fileName) {
     'year_built','date_built','year_used','owner_operator','location','design_code','design_pressure','design_temperature',
     'mawp','operating_pressure','operating_temperature','volume','diameter','length_or_height',
     'material_shell','material_head','corrosion_allowance','nominal_thickness','inspection_date',
-    'inspection_summary','document_reference'
+    'inspection_summary','document_reference','fluid_service'
   ];
   const schema = Object.fromEntries(fields.map((key) => [key, null]));
   schema._source_location = null;
@@ -32,6 +32,7 @@ export function buildPvDocumentPrompt(documentType, equipment, fileName) {
     '10. Do not create UT point readings in this workflow. Previous UT and Last UT are handled by separate modules.',
     '11. If multiple pages describe the same equipment, consolidate facts into one record and retain all relevant page references in _source_location.',
     '12. Do not silently resolve conflicting values. Prefer null for the conflicting field and describe the conflict in _source_location.',
-    '13. Extract Year Built, Date Built, and Year Used as separate fields when the source provides them. year_built is the build year only; year_used is the commissioning/first-used year only. Never concatenate them into one value such as 1996/1996. If only a four-digit build year is printed, return that year in year_built and leave date_built null; the application will format Date Built as 01/01/YYYY as a register convention.'
+    '13. Extract Year Built, Date Built, and Year Used as separate fields when the source provides them. year_built is the build year only; year_used is the commissioning/first-used year only. Never concatenate them into one value such as 1996/1996. If only a four-digit build year is printed, return that year in year_built and leave date_built null; the application will format Date Built as 01/01/YYYY as a register convention.',
+    '14. Extract fluid_service from the field labelled Service, Fluid Service, Fluid, or Service Type. Preserve the client wording as printed. In particular, if the document says Service: Gas, return fluid_service="Gas"; if it says Service: Fluida, return fluid_service="Fluida". Do not leave fluid_service null when one of these labels and values is visible. Do not infer Gas or Fluida from process descriptions if the service field is absent.'
   ].join('\n');
 }
