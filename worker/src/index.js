@@ -646,7 +646,8 @@ export default {
               ? buildPvUtPrompt(url.pathname === '/api/extract/pv-previous-ut' ? 'previous' : 'last', {
                   id: String(form.get('equipment_id') || '').slice(0, 100),
                   tag: String(form.get('equipment_tag') || '').slice(0, 200),
-                  name: String(form.get('equipment_name') || '').slice(0, 200)
+                  name: String(form.get('equipment_name') || '').slice(0, 200),
+                  known_tags: (() => { try { const list = JSON.parse(form.get('known_equipment_tags') || '[]'); return Array.isArray(list) ? list.filter(x => x && typeof x.tag === 'string').slice(0, 500) : []; } catch { return []; } })()
                 }, file.name)
               : url.pathname === '/api/extract/pv-document'
               ? buildPvDocumentPrompt(form.get('document_type'), {
