@@ -386,6 +386,15 @@ export default {
             ).bind(equipmentId, tag, record.serial_number || null, record.equipment_name || null, record.owner_operator || null, record.location || null, JSON.stringify({ ...identity, _registration_status: 'draft', _registration_source: staged.file_name })).run();
             equipment = { id: equipmentId, tag };
             created = true;
+          } else {
+            const existing = await env.DB.prepare("SELECT serial_number, equipment_name, owner_operator, location, identity_json FROM equipment WHERE id = ?").bind(equipment.id).first();
+            let oldIdentity = {};
+            try { oldIdentity = JSON.parse(existing?.identity_json || '{}'); } catch { oldIdentity = {}; }
+            const incoming = Object.fromEntries(Object.entries(record).filter(([key, value]) => !key.startsWith('_') && value !== null && value !== ''));
+            const mergedIdentity = { ...incoming, ...oldIdentity, _registration_source: staged.file_name };
+            await env.DB.prepare(
+              "UPDATE equipment SET serial_number = CASE WHEN serial_number IS NULL OR trim(serial_number) = '' THEN ? ELSE serial_number END, equipment_name = CASE WHEN equipment_name IS NULL OR trim(equipment_name) = '' THEN ? ELSE equipment_name END, owner_operator = CASE WHEN owner_operator IS NULL OR trim(owner_operator) = '' THEN ? ELSE owner_operator END, location = CASE WHEN location IS NULL OR trim(location) = '' THEN ? ELSE location END, identity_json = ?, updated_at = strftime('%Y-%m-%dT%H:%M:%fZ', 'now') WHERE id = ?"
+            ).bind(record.serial_number || null, record.equipment_name || null, record.owner_operator || null, record.location || null, JSON.stringify(mergedIdentity), equipment.id).run();
           }
           const documentId = crypto.randomUUID();
           await env.DB.batch([
@@ -435,6 +444,15 @@ export default {
               ).bind(equipmentId, tag, record.serial_number || null, record.equipment_name || null, record.owner_operator || null, record.location || null, JSON.stringify({ ...identity, _registration_status: 'draft', _registration_source: fileName })).run();
               equipment = { id: equipmentId, tag };
               created = true;
+            } else {
+              const existing = await env.DB.prepare("SELECT serial_number, equipment_name, owner_operator, location, identity_json FROM equipment WHERE id = ?").bind(equipment.id).first();
+              let oldIdentity = {};
+              try { oldIdentity = JSON.parse(existing?.identity_json || '{}'); } catch { oldIdentity = {}; }
+              const incoming = Object.fromEntries(Object.entries(record).filter(([key, value]) => !key.startsWith('_') && value !== null && value !== ''));
+              const mergedIdentity = { ...incoming, ...oldIdentity, _registration_source: fileName };
+              await env.DB.prepare(
+                "UPDATE equipment SET serial_number = CASE WHEN serial_number IS NULL OR trim(serial_number) = '' THEN ? ELSE serial_number END, equipment_name = CASE WHEN equipment_name IS NULL OR trim(equipment_name) = '' THEN ? ELSE equipment_name END, owner_operator = CASE WHEN owner_operator IS NULL OR trim(owner_operator) = '' THEN ? ELSE owner_operator END, location = CASE WHEN location IS NULL OR trim(location) = '' THEN ? ELSE location END, identity_json = ?, updated_at = strftime('%Y-%m-%dT%H:%M:%fZ', 'now') WHERE id = ?"
+              ).bind(record.serial_number || null, record.equipment_name || null, record.owner_operator || null, record.location || null, JSON.stringify(mergedIdentity), equipment.id).run();
             }
             const documentId = crypto.randomUUID();
             await env.DB.batch([
