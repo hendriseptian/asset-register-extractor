@@ -29,14 +29,14 @@ html,body{width:100%;min-width:0;margin:0}
 .main-content>.topbar,.main-content>section.panel,.main-content>.site-footer{width:100%!important;max-width:none!important;min-width:0!important;box-sizing:border-box!important}
 .main-content>section.panel:nth-of-type(2){display:flex!important;flex:1 1 auto!important;flex-direction:column!important;min-height:calc(100vh - 205px)!important;margin-bottom:0!important}
 .main-content>section.panel:nth-of-type(2) #records{display:flex;flex:1 1 auto;flex-direction:column;min-height:0;width:100%}
-.main-content>section.panel:nth-of-type(2) .rv-table-wrap:has(.rv-excel-table){flex:1 1 auto!important;width:100%!important;max-width:none!important;min-width:0!important;min-height:calc(100vh - 330px)!important;max-height:none!important;overflow:auto!important;box-sizing:border-box!important}
+.main-content>section.panel:nth-of-type(2) .rv-table-wrap:has(.rv-excel-table){flex:0 1 auto!important;width:100%!important;max-width:none!important;min-width:0!important;height:calc(100vh - 120px)!important;min-height:420px!important;max-height:calc(100vh - 120px)!important;overflow:auto!important;box-sizing:border-box!important;overscroll-behavior:contain}
 .main-content>section.panel:nth-of-type(2) .rv-card .rv-table-wrap{flex:none!important;width:100%!important;min-height:0!important;height:auto!important;max-height:none!important;overflow-x:auto!important;overflow-y:hidden!important}
 .rv-excel-table{width:max-content!important;min-width:2600px!important}
 @media(max-width:760px){
  .app-shell{display:block!important}
  .app-shell>.sidebar{width:100%!important;min-height:auto!important;flex-direction:row!important;align-items:center!important;overflow-x:auto!important}
  .app-shell>.main-content{display:block!important;width:100%!important;padding:14px!important}
- .main-content>section.panel:nth-of-type(2) .rv-table-wrap{min-height:65vh!important}
+ .main-content>section.panel:nth-of-type(2) .rv-table-wrap:has(.rv-excel-table){height:65vh!important;min-height:360px!important;max-height:65vh!important;overflow:auto!important}
 }
 </style></head><body><div class="app-shell"><aside class="sidebar"><div class="sidebar-brand"><img class="brand-logo small" src="assets/mechasset-logo.svg" alt="MECHASSET"><div><b>MECHASSET</b><small>Mechanical Asset Management</small></div></div><nav><a href="pv-dashboard.html">Dashboard</a><a href="pv-documents.html">Documents Extraction</a><a href="pv-ut.html?period=previous">Extract Previous UT</a><a href="pv-ut.html?period=last">Extract Last UT</a><a class="active" href="pv-review.html">Mapping &amp; Review</a><a href="pv-register.html">PV Asset Register</a><a href="pv-export.html">Export Excel</a></nav><div class="sidebar-bottom"><a href="dashboard.html">← Equipment selection</a><a href="index.html">Settings / Worker URL</a></div></aside>
 <main class="main-content"><header class="topbar"><div><p class="eyebrow">MECHASSET · PRESSURE VESSEL</p><h1>Mapping &amp; Review</h1><p class="muted">Review extracted Datasheet and UT readings in an Excel-style table. Changes are saved to D1.</p></div><a class="text-link" href="pv-dashboard.html">Back to PV dashboard</a></header>
