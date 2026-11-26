@@ -414,6 +414,7 @@ export default {
           const body = await request.json();
           const recordType = String(body.record_type || 'document');
           if (!['document', 'previous_ut', 'last_ut'].includes(recordType)) return json(request, { error: 'record_type must be document, previous_ut, or last_ut.' }, 400);
+          const isUtRecord = recordType === 'previous_ut' || recordType === 'last_ut';
           const defaultDocumentType = recordType === 'previous_ut' ? 'Previous UT' : recordType === 'last_ut' ? 'Last UT' : 'Other Supporting Documents';
           const documentType = String(body.document_type || defaultDocumentType).slice(0, 100);
           const fileName = String(body.file_name || '').slice(0, 255);
@@ -423,6 +424,9 @@ export default {
           if (!fileName || !Array.isArray(records) || records.length < 1 || records.length > 100) {
             return json(request, { error: 'file_name and records[] (1-100) are required.' }, 400);
           }
+          const normalizeTag = (value) => String(value || '').normalize('NFKC').toLowerCase().replace(/[^a-z0-9]/g, '');
+          const equipmentResult = await env.DB.prepare("SELECT id, tag FROM equipment WHERE module = 'PV'").all();
+          const knownEquipment = equipmentResult.results || [];
           const outcomes = [];
           const documentIds = new Map();
           for (const record of records) {
@@ -438,9 +442,19 @@ export default {
               outcomes.push({ status: 'pending_identification', staging_id: stagingId, equipment_tag: null });
               continue;
             }
-            let equipment = await env.DB.prepare(
-              "SELECT id, tag FROM equipment WHERE module = 'PV' AND lower(trim(tag)) = lower(trim(?)) LIMIT 1"
-            ).bind(tag).first();
+            const normalizedTag = normalizeTag(tag);
+            const matches = knownEquipment.filter(item => normalizeTag(item.tag) === normalizedTag);
+            let equipment = matches.length === 1 ? matches[0] : null;
+            // UT documents are historical records, never authority to register a new pressure vessel.
+            // If tag matching is missing or ambiguous, hold the record for manual identification.
+            if (!equipment && isUtRecord) {
+              const stagingId = crypto.randomUUID();
+              await env.DB.prepare(
+                'INSERT INTO pv_intake_staging (id, document_type, file_name, mime_type, extraction_model, record_json) VALUES (?, ?, ?, ?, ?, ?)'
+              ).bind(stagingId, documentType, fileName, mimeType, modelName, JSON.stringify({ ...record, _record_type: recordType, _matching_note: matches.length > 1 ? 'Multiple existing equipment tags match after normalization.' : 'UT record did not match an existing PV equipment tag; no new equipment was created.' })).run();
+              outcomes.push({ status: 'pending_identification', staging_id: stagingId, equipment_tag: tag, matching_candidates: matches.length });
+              continue;
+            }
             let created = false;
             if (!equipment) {
               const equipmentId = crypto.randomUUID();
@@ -449,6 +463,7 @@ export default {
                 "INSERT INTO equipment (id, module, tag, serial_number, equipment_name, owner_operator, location, identity_json) VALUES (?, 'PV', ?, ?, ?, ?, ?, ?)"
               ).bind(equipmentId, tag, record.serial_number || null, record.equipment_name || null, record.owner_operator || null, record.location || null, JSON.stringify({ ...identity, _registration_status: 'draft', _registration_source: fileName })).run();
               equipment = { id: equipmentId, tag };
+              knownEquipment.push(equipment);
               created = true;
             } else {
               const existing = await env.DB.prepare("SELECT serial_number, equipment_name, owner_operator, location, identity_json FROM equipment WHERE id = ?").bind(equipment.id).first();
@@ -642,7 +657,7 @@ export default {
               : buildExtractionPrompt(parseMapping(form.get('mapping')), file.name)
         });
         if (url.pathname === '/api/extract/pv-previous-ut' || url.pathname === '/api/extract/pv-last-ut') {
-          const keys = ['equipment_tag','report_date','inspection_date','component','measurement_location','measurement_point','thickness_reading','thickness_unit','corrosion_rate','remaining_life','remarks'];
+          const keys = ['equipment_tag','serial_number','report_date','inspection_date','component','measurement_location','measurement_point','thickness_reading','thickness_unit','corrosion_rate','remaining_life','remarks'];
           const records = (Array.isArray(result.records) ? result.records : []).map((record) => {
             const output = {};
             for (const key of keys) output[key] = record?.[key] ?? null;
