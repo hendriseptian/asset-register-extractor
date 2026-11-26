@@ -53,7 +53,7 @@ function exportWorkbook(){
   const docs=g.rows.filter(x=>x.record_type==='document'),display=ut.length?ut:(docs.length?docs:[{record_type:'document',record:g.doc}]);
   const first=rowNum;
   for(const row of display){
-   const r={...g.doc,...(row.record||{})},v=k=>r[k]??'';
+   const r={...g.doc};for(const [field,value] of Object.entries(row.record||{}))if(value!==null&&value!==undefined&&String(value).trim()!=='')r[field]=value;const v=k=>r[k]??'';
    matrix.push([equipmentNo,g.tag||v('equipment_tag'),v('component'),v('equipment_name',g.e.equipment_name),v('owner_operator',g.e.owner_operator),v('location',g.e.location),v('equipment_type'),v('serial_number',g.e.serial_number),v('manufacturer'),v('diameter_value',v('diameter')),v('diameter_unit'),v('length_or_height',v('length')),v('length_unit'),v('height_wide',v('height_width')),v('height_wide_unit',v('height_unit')),v('corrosion_allowance'),v('design_code'),v('material_type',v('material')),v('material_detail',v('material_shell',v('material_head'))),v('year_built'),v('date_built'),v('year_used'),v('previous_inspection',v('previous_inspection_year')),v('last_inspection',v('last_inspection_year')),v('inspection_date'),v('nominal_thickness'),v('previous_thickness'),v('actual_thickness',(['previous_ut','last_ut'].includes(row.record_type)?v('thickness_reading'):'')),v('design_pressure'),v('mawp'),v('hydrotest_pressure'),v('operating_pressure'),v('design_temperature'),v('operating_temperature'),v('fluid_service')]);
    rowNum++;
   }
