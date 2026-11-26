@@ -504,6 +504,40 @@ export default {
           return json(request, { ok: true, document_id: docId, saved_records: records.length }, 201);
         }
 
+        if (url.pathname === '/api/pv/equipment/link-records' && request.method === 'POST') {
+          const body = await request.json();
+          const sourceId = String(body.source_equipment_id || '').trim();
+          const targetTag = String(body.target_tag || '').trim().slice(0, 300);
+          if (!sourceId || !targetTag) return json(request, { error: 'source_equipment_id and target_tag are required.' }, 400);
+          if (sourceId.length > 100) return json(request, { error: 'Invalid source equipment id.' }, 400);
+          const [source, target] = await Promise.all([
+            env.DB.prepare("SELECT id, tag, identity_json FROM equipment WHERE id = ? AND module = 'PV'").bind(sourceId).first(),
+            env.DB.prepare("SELECT id, tag, serial_number, equipment_name, owner_operator, location, identity_json FROM equipment WHERE module = 'PV' AND lower(trim(tag)) = lower(trim(?)) LIMIT 1").bind(targetTag).first()
+          ]);
+          if (!source) return json(request, { error: 'Source PV equipment group not found.' }, 404);
+          if (!target) return json(request, { error: 'Target PV equipment tag not found.' }, 404);
+          if (source.id === target.id) return json(request, { error: 'Source and target equipment are the same.' }, 400);
+          const sourceCounts = await Promise.all([
+            env.DB.prepare('SELECT COUNT(*) AS n FROM pv_extracted_records WHERE equipment_id = ?').bind(sourceId).first(),
+            env.DB.prepare('SELECT COUNT(*) AS n FROM pv_documents WHERE equipment_id = ?').bind(sourceId).first()
+          ]);
+          const movedRecords = Number(sourceCounts[0]?.n || 0);
+          const movedDocuments = Number(sourceCounts[1]?.n || 0);
+          if (!movedRecords) return json(request, { error: 'No extracted records exist in the source group.' }, 409);
+          let sourceIdentity = {};
+          let targetIdentity = {};
+          try { sourceIdentity = JSON.parse(source.identity_json || '{}'); } catch {}
+          try { targetIdentity = JSON.parse(target.identity_json || '{}'); } catch {}
+          const mergedIdentity = { ...sourceIdentity, ...targetIdentity };
+          await env.DB.batch([
+            env.DB.prepare('UPDATE pv_extracted_records SET equipment_id = ?, updated_at = strftime(\'%Y-%m-%dT%H:%M:%fZ\', \'now\') WHERE equipment_id = ?').bind(target.id, sourceId),
+            env.DB.prepare('UPDATE pv_documents SET equipment_id = ? WHERE equipment_id = ?').bind(target.id, sourceId),
+            env.DB.prepare("UPDATE equipment SET identity_json = ?, serial_number = COALESCE(NULLIF(serial_number, ''), ?), equipment_name = COALESCE(NULLIF(equipment_name, ''), ?), owner_operator = COALESCE(NULLIF(owner_operator, ''), ?), location = COALESCE(NULLIF(location, ''), ?), updated_at = strftime('%Y-%m-%dT%H:%M:%fZ', 'now') WHERE id = ?").bind(JSON.stringify(mergedIdentity), sourceIdentity.serial_number || null, sourceIdentity.equipment_name || null, sourceIdentity.owner_operator || null, sourceIdentity.location || null, target.id),
+            env.DB.prepare('DELETE FROM equipment WHERE id = ? AND module = \'PV\'').bind(sourceId)
+          ]);
+          return json(request, { ok: true, target_tag: target.tag, moved_records: movedRecords, moved_documents: movedDocuments });
+        }
+
         if (url.pathname === '/api/pv/register' && request.method === 'GET') {
           const equipmentId = String(url.searchParams.get('equipment_id') || '').slice(0, 100);
           if (!equipmentId) return json(request, { error: 'equipment_id is required.' }, 400);
