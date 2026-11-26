@@ -52,8 +52,24 @@ function render(){document.querySelectorAll('[data-tab]').forEach(b=>b.classList
  const groups=equipment.map(eq=>({eq,rows:records.filter(r=>r.equipment_id===eq.id)})).filter(g=>g.rows.length);
  $('records').innerHTML=groups.map(({eq,rows})=>{const docs=rows.filter(r=>r.record_type==='document'),prev=rows.filter(r=>r.record_type==='previous_ut'),last=rows.filter(r=>r.record_type==='last_ut');return '<article class="rv-card"><div class="rv-head"><div><h3 style="margin:0">'+esc(eq.tag||'Equipment')+' · '+esc(eq.equipment_name||'Pressure Vessel')+'</h3><p class="rv-source">'+esc(eq.serial_number||'')+' · '+esc(eq.location||'')+'</p></div><span class="rv-status">'+rows.length+' extracted row(s)</span></div><h4>Datasheet / Supporting Documents</h4>'+documentTable(docs)+'<h4>Previous UT Measurements</h4>'+utTableFor(prev,eq,'previous_ut')+'<h4>Last UT Measurements</h4>'+utTableFor(last,eq,'last_ut')+'</article>'}).join('');
 }
-document.querySelectorAll('tr[data-record]').forEach(tr=>{tr.querySelector('[data-save]').addEventListener('click',async()=>{const row=records.find(x=>x.record_id===tr.dataset.record);const record={...(row.record||{})};tr.querySelectorAll('[data-field]').forEach(el=>record[el.dataset.field]=el.value===''?null:el.value);const status=tr.querySelector('[data-status]').value;const btn=tr.querySelector('[data-save]');btn.disabled=true;try{await api('/api/pv/records/'+encodeURIComponent(row.record_id),{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify({record,review_status:status})});$('notice').textContent='Record saved to D1.';await load()}catch(err){$('notice').textContent='Save failed: '+err.message;btn.disabled=false}});tr.querySelector('[data-delete]').addEventListener('click',async()=>{const row=records.find(x=>x.record_id===tr.dataset.record);if(!confirm('Delete this extracted row from D1?'))return;const btn=tr.querySelector('[data-delete]');btn.disabled=true;try{await api('/api/pv/records/'+encodeURIComponent(row.record_id),{method:'DELETE'});$('notice').textContent='Record deleted from D1.';await load()}catch(err){$('notice').textContent='Delete failed: '+err.message;btn.disabled=false}})});
-}
+// Event delegation keeps Save/Delete active after every render and reload.
+$('records').addEventListener('click',async event=>{
+ const saveBtn=event.target.closest('[data-save]'),deleteBtn=event.target.closest('[data-delete]');
+ if(!saveBtn&&!deleteBtn)return;
+ const tr=event.target.closest('tr[data-record]');if(!tr)return;
+ const row=records.find(x=>String(x.record_id)===String(tr.dataset.record));
+ if(!row){$('notice').textContent='Record not found in current data. Reload and try again.';return}
+ if(saveBtn){
+  const record={...(row.record||{})};tr.querySelectorAll('[data-field]').forEach(el=>record[el.dataset.field]=el.value===''?null:el.value);
+  const status=tr.querySelector('[data-status]')?.value||'pending';saveBtn.disabled=true;
+  try{await api('/api/pv/records/'+encodeURIComponent(row.record_id),{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify({record,review_status:status})});$('notice').textContent='Record saved to D1.';await load()}
+  catch(err){$('notice').textContent='Save failed: '+err.message;saveBtn.disabled=false}
+ }else{
+  if(!confirm('Delete this extracted row from D1?'))return;deleteBtn.disabled=true;
+  try{await api('/api/pv/records/'+encodeURIComponent(row.record_id),{method:'DELETE'});$('notice').textContent='Record deleted from D1.';await load()}
+  catch(err){$('notice').textContent='Delete failed: '+err.message;deleteBtn.disabled=false}
+ }
+});
 document.querySelectorAll('[data-tab]').forEach(b=>b.addEventListener('click',()=>{tab=b.dataset.tab;render()}));$('reload').addEventListener('click',load);load();
 })();
 </script></body></html>
