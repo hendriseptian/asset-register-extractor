@@ -2,7 +2,7 @@
 <html lang="en"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
 <title>MECHASSET | PV Export Excel</title>
 <link rel="stylesheet" href="assets/css/style.css"><link rel="stylesheet" href="assets/css/dashboard.css"><link rel="icon" type="image/svg+xml" href="assets/mechasset-logo.svg"><script src="assets/js/theme.js" defer></script>
-<script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/xlsx-js-style@1.2.0/dist/xlsx.bundle.js"></script>
 <style>
 .ex-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px}.ex-field{display:flex;flex-direction:column;gap:7px}.ex-field label{font-size:12px;font-weight:700;color:var(--muted)}.ex-field input,.ex-field select{padding:11px;border:1px solid var(--line);border-radius:8px;background:var(--white);color:var(--ink)}.ex-note{padding:12px;border-radius:8px;background:var(--surface);font-size:12px;color:var(--muted);line-height:1.6}.ex-stats{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px}.ex-stat{padding:13px;border:1px solid var(--line);border-radius:9px}.ex-stat small{display:block;color:var(--muted);font-size:11px}.ex-stat strong{font-size:22px}.ex-actions{display:flex;gap:10px;flex-wrap:wrap;margin-top:16px}@media(max-width:720px){.ex-grid{grid-template-columns:1fr}.ex-stats{grid-template-columns:repeat(2,1fr)}.main-content{padding:15px}}
 </style></head><body><div class="app-shell">
@@ -100,7 +100,20 @@ function exportWorkbook(){
  }
  const pv=XLSX.utils.aoa_to_sheet(matrix);
  pv['!merges']=[{s:{r:0,c:0},e:{r:1,c:5}},{s:{r:0,c:6},e:{r:1,c:34}},...[[0,0],[1,1],[2,2],[3,3],[4,4],[5,5],[6,6],[7,7],[8,8],[15,15],[16,16],[34,34]].map(([a,b])=>({s:{r:2,c:a},e:{r:3,c:b}})),...[[9,10],[11,12],[13,14],[17,18],[19,21],[22,24],[25,27],[28,31],[32,33]].map(([a,b])=>({s:{r:2,c:a},e:{r:2,c:b}})),...merges];
- pv['!cols']=Array.from({length:35},(_,i)=>({wch:i===0?7:i===1?18:i===2?20:18}));pv['!freeze']={xSplit:2,ySplit:4};XLSX.utils.book_append_sheet(wb,pv,'Database PV');
+ pv['!cols']=[7.43,16.71,19,16.86,19,24.29,13,17,32.14,14,9.86,14,9,14,9,18,27.57,14.29,15.29,11,13,11,11.71,11.71,11.71,13.14,13.71,13.86,14,14,14,14,14,14,18].map(wch=>({wch}));
+ pv['!rows']=[{hpt:22},{hpt:8},{hpt:30},{hpt:24}];
+ const thin={style:'thin',color:{rgb:'D0D0D0'}},cellBorder={top:thin,bottom:thin,left:thin,right:thin};
+ for(let rr=0;rr<matrix.length;rr++)for(let cc=0;cc<35;cc++){
+  const addr=XLSX.utils.encode_cell({r:rr,c:cc});
+  if(!pv[addr])continue;
+  const isHeader=rr===2||rr===3,isTitle=rr===0;
+  pv[addr].s={
+   font:{name:'Arial',sz:isHeader?10:10,bold:isHeader||isTitle,color:{rgb:'000000'}},
+   alignment:{vertical:'center',horizontal:isHeader?'left':(cc<3?'center':'left'),wrapText:isHeader},
+   border:cellBorder
+  };
+ }
+ pv['!freeze']={xSplit:2,ySplit:4};XLSX.utils.book_append_sheet(wb,pv,'Database PV');
  const now=new Date(),stamp=now.getFullYear()+String(now.getMonth()+1).padStart(2,'0')+String(now.getDate()).padStart(2,'0');
  XLSX.writeFile(wb,'MECHASSET_PV_Database_'+stamp+'.xlsx');
  $('status').textContent='Excel generated in Database PV template order (A:AI). All edits made in Mapping & Review are included.';
