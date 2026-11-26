@@ -661,6 +661,12 @@ export default {
           const records = (Array.isArray(result.records) ? result.records : []).map((record) => {
             const output = {};
             for (const key of keys) output[key] = record?.[key] ?? null;
+            // Previous UT reports use the report date as the inspection date in this workflow.
+            // Move that value to inspection_date so it is not shown as a separate report date.
+            if (url.pathname.endsWith('previous-ut')) {
+              output.inspection_date = output.inspection_date || output.report_date || null;
+              output.report_date = null;
+            }
             output._source_location = record?._source_location ?? null;
             const confidence = Number(record?._confidence);
             output._confidence = Number.isFinite(confidence) ? Math.max(0, Math.min(1, confidence)) : 0.5;
