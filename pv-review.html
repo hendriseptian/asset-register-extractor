@@ -70,7 +70,43 @@ function hasValue(v){return v!==null&&v!==undefined&&String(v).trim()!==''}
 function normalizeEquipmentTag(v){return String(v??'').normalize('NFKC').toLowerCase().replace(/[^a-z0-9]/g,'')}
 function mergedDoc(rows){const out={};for(const r of rows){for(const [k,v] of Object.entries(r.record||{})){if(!k.startsWith('_')&&hasValue(v)&&(out[k]===undefined||!hasValue(out[k])))out[k]=v}}return out}
 function isUtMeasurement(r){const rec=r.record||{};return ['previous_ut','last_ut'].includes(r.record_type)&&(hasValue(rec.component)||hasValue(rec.thickness_reading)||hasValue(rec.measurement_location)||hasValue(rec.measurement_point))}
-const cols=[['Part','component'],['Equipment Name','equipment_name'],['Owner / Operator','owner_operator'],['Location / Platform','location'],['PV Type','equipment_type'],['Serial No.','serial_number'],['Manufacturer','manufacturer'],['Model','model'],['Diameter','diameter'],['Diameter Unit','diameter_unit'],['Length','length_or_height'],['Length Unit','length_unit'],['Height/Width','height_wide'],['Height Unit','height_wide_unit'],['Corrosion Allowance','corrosion_allowance'],['Design Code','design_code'],['Design Pressure','design_pressure'],['Design Temperature','design_temperature'],['MAWP','mawp'],['Shell Material','material_shell'],['Head Material','material_head'],['Nominal Thickness','nominal_thickness'],['Report Date','report_date'],['Inspection Date','inspection_date'],['Measurement Location','measurement_location'],['Measurement Point','measurement_point'],['Thickness Reading','thickness_reading'],['Thickness Unit','thickness_unit'],['Corrosion Rate','corrosion_rate'],['Remaining Life','remaining_life'],['Remarks','remarks'],['Source Document','_source_file']];
+const cols=[
+ ['A','No.','',null],['B','Tag PV','',null],['C','Part','component'],['D','Equipment Name','equipment_name'],['E','Owner / Operator','owner_operator'],['F','Location / Platform','location'],['G','PV type','equipment_type'],['H','Serial No.','serial_number'],['I','Manufacture','manufacturer'],['J','Diameter','diameter'],['K','','diameter_unit'],['L','Length','length_or_height'],['M','','length_unit'],['N','Height/Wide','height_wide'],['O','','height_wide_unit'],['P','Corrosion Allowance (mm)','corrosion_allowance'],['Q','Design Code','design_code'],['R','Material','material_type'],['S','','material_detail'],['T','Year','year_built'],['U','','date_built'],['V','','year_used'],['W','Inspection','previous_inspection'],['X','','last_inspection'],['Y','','inspection_date'],['Z','Thickness (mm)','nominal_thickness'],['AA','','previous_thickness'],['AB','','actual_thickness'],['AC','Pressure (kg/)','design_pressure'],['AD','','mawp'],['AE','','hydrotest_pressure'],['AF','','operating_pressure'],['AG','Temperature (℃)','design_temperature'],['AH','','operating_temperature'],['AI','Fluid Service','fluid_service']
+];
+const headerGroups=[['A','No.',1],['B','Tag PV',1],['C','Part',1],['D','Equipment Name',1],['E','Owner / Operator',1],['F','Location / Platform',1],['G','PV type',1],['H','Serial No.',1],['I','Manufacture',1],['J','Diameter',2],['L','Length',2],['N','Height/Wide',2],['P','Corrosion Allowance (mm)',1],['Q','Design Code',1],['R','Material',2],['T','Year',3],['W','Inspection',3],['Z','Thickness (mm)',3],['AC','Pressure (kg/)',4],['AG','Temperature (℃)',2],['AI','Fluid Service',1]];
+const subHeaders={J:'Value',K:'Unit',L:'Value',M:'Unit',N:'Value',O:'Unit',R:'Type',S:'Detail',T:'Built',U:'Date Built',V:'Used',W:'Previous Inspection',X:'last Inspection',Y:'Date',Z:'Nominal Thickness',AA:'Previous Thickness',AB:'Actual Thickness',AC:'Design',AD:'MAWP',AE:'HydroTest',AF:'Operating',AG:'Design',AH:'Operating'};
+const columnLetters=cols.map(x=>x[0]);
+function readEdits(){try{return JSON.parse(localStorage.getItem('mechasset_pv_review_edits_v1')||'{}')}catch{return {}}}
+function applyEdits(recordId,record){const edits=readEdits()[String(recordId||'')]||{};return {...record,...edits}}
+function valueFor(key,rec,eq,base,row,index){
+ if(key==='A')return index+1;
+ if(key==='B')return eq.tag||base.equipment_tag||'';
+ if(key==='J'&& !hasValue(rec.diameter)&&hasValue(rec.diameter_value))return rec.diameter_value;
+ if(key==='K'&& !hasValue(rec.diameter_unit)&&hasValue(rec.diameter))return (String(rec.diameter).match(/\b(mm|cm|m|inch|in)\b/i)||[])[1]||'';
+ if(key==='L'&&!hasValue(rec.length_or_height)&&hasValue(rec.length))return rec.length;
+ if(key==='M'&&!hasValue(rec.length_unit)&&hasValue(rec.length_or_height))return (String(rec.length_or_height).match(/\b(mm|cm|m)\b/i)||[])[1]||'';
+ if(key==='N')return rec.height_wide??rec.height_width??'';
+ if(key==='O')return rec.height_wide_unit??rec.height_unit??'';
+ if(key==='R')return rec.material_type??rec.material??'';
+ if(key==='S')return rec.material_detail??rec.material_shell??rec.material_head??'';
+ if(key==='T')return rec.year_built??'';
+ if(key==='U')return rec.date_built??'';
+ if(key==='V')return rec.year_used??'';
+ if(key==='W')return rec.previous_inspection??rec.previous_inspection_year??'';
+ if(key==='X')return rec.last_inspection??rec.last_inspection_year??'';
+ if(key==='Y')return rec.inspection_date??'';
+ if(key==='Z')return rec.nominal_thickness??'';
+ if(key==='AA')return rec.previous_thickness??'';
+ if(key==='AB')return rec.actual_thickness??(row.record_type==='previous_ut'||row.record_type==='last_ut'?rec.thickness_reading:'')??'';
+ if(key==='AC')return rec.design_pressure??'';
+ if(key==='AD')return rec.mawp??'';
+ if(key==='AE')return rec.hydrotest_pressure??'';
+ if(key==='AF')return rec.operating_pressure??'';
+ if(key==='AG')return rec.design_temperature??'';
+ if(key==='AH')return rec.operating_temperature??'';
+ if(key==='AI')return rec.fluid_service??'';
+ return rec[key]??'';
+}
 function renderCombined(){
  const prepared=equipment.map(eq=>{
   const all=records.filter(r=>String(r.equipment_id)===String(eq.id));
@@ -81,41 +117,39 @@ function renderCombined(){
  });
  const buckets=new Map();
  prepared.forEach(item=>{
-  const normalized=normalizeEquipmentTag(item.resolvedTag);
-  const key=normalized?'tag:'+normalized:'id:'+item.eq.id;
+  const normalized=normalizeEquipmentTag(item.resolvedTag),key=normalized?'tag:'+normalized:'id:'+item.eq.id;
   if(!buckets.has(key))buckets.set(key,{eq:item.eq,items:[],resolvedTag:item.resolvedTag});
-  const bucket=buckets.get(key);
-  bucket.items.push(item);
+  const bucket=buckets.get(key);bucket.items.push(item);
   if(!hasValue(bucket.resolvedTag)&&hasValue(item.resolvedTag))bucket.resolvedTag=item.resolvedTag;
  });
  const groups=[...buckets.values()].map(bucket=>{
-  const all=bucket.items.flatMap(item=>item.all);
-  const identities=bucket.items.map(item=>({record:item.identity}));
-  const documents=all.filter(r=>r.record_type==='document');
-  const base=mergedDoc([...identities,...documents]);
+  const all=bucket.items.flatMap(item=>item.all),identities=bucket.items.map(item=>({record:item.identity}));
+  const documents=all.filter(r=>r.record_type==='document'),base=mergedDoc([...identities,...documents]);
   if(!hasValue(base.equipment_tag)&&hasValue(bucket.resolvedTag))base.equipment_tag=bucket.resolvedTag;
-  const ut=all.filter(isUtMeasurement);
-  const rows=ut.length?ut:(documents.length?documents:[{record_id:'',record_type:'document',record:base}]);
-  return {eq:bucket.eq,items:bucket.items.map(x=>x.eq),all,base,rows,resolvedTag:bucket.resolvedTag};
+  const ut=all.filter(isUtMeasurement),rows=ut.length?ut:(documents.length?documents:[{record_id:'',record_type:'document',record:base}]);
+  return {eq:bucket.eq,all,base,rows,resolvedTag:bucket.resolvedTag};
  }).filter(g=>g.rows.length);
  if(!groups.length){$('records').innerHTML='<div class="rv-empty">No PV records found. Scan a Datasheet or UT report first.</div>';return}
  let n=0;
  const body=groups.map(({eq,base,rows,resolvedTag})=>rows.map((row,i)=>{
-  n++;
-  const rec={...base};
-  for(const [k,v] of Object.entries(row.record||{}))if(hasValue(v))rec[k]=v;
-  const cells=cols.map(([label,key])=>'<td><input value="'+esc(key==='_source_file'?(row.file_name||row.document_type||''):(rec[key]??''))+'" aria-label="'+esc(label)+'" readonly></td>').join('');
+  n++;const edited=applyEdits(row.record_id,row.record||{}),rec={...base,...edited};
+  const cells=cols.slice(2).map(([letter,label,key])=>{
+   const value=valueFor(letter,rec,eq,base,{...row,record_type:row.record_type},n-1);
+   return '<td><input data-edit-field="'+letter+'" data-record-id="'+esc(row.record_id||'')+'" value="'+esc(value)+'" aria-label="'+esc(letter+' '+label)+'"></td>';
+  }).join('');
   const tag=i===0?'<td class="rv-tag-merge" rowspan="'+rows.length+'">'+esc(resolvedTag||base.equipment_tag||'—')+'</td>':'';
   const actions=row.record_id?'<button class="btn secondary" data-delete>Delete</button>':'<span class="rv-status">Datasheet only</span>';
   return '<tr data-record="'+esc(row.record_id||'')+'"><td>'+n+'</td>'+tag+cells+'<td class="rv-action">'+actions+'</td></tr>';
  }).join('')).join('');
- const gh='<th colspan="1">Part</th><th colspan="7">Equipment Identification</th><th colspan="14">PV Design Data</th><th colspan="10">UT Measurement Results</th>';
- const heads=cols.map(([label])=>'<th>'+esc(label)+'</th>').join('');
- $('records').innerHTML='<div class="rv-table-wrap"><table class="rv-table rv-excel-table"><thead><tr><th rowspan="2">No.</th><th rowspan="2">Tag PV</th>'+gh+'<th rowspan="2" class="rv-action">Review Actions</th></tr><tr>'+heads+'</tr></thead><tbody>'+body+'</tbody></table></div>';
+ const letters='<tr class="rv-col-letters">'+cols.map(([letter])=>'<th>'+letter+'</th>').join('')+'<th></th></tr>';
+ const mainHeaders=headerGroups.map(([letter,label,span])=>'<th '+(span>1?'colspan="'+span+'"':'rowspan="2"')+'>'+esc(label)+'</th>').join('');
+ const sub=cols.filter(([letter])=>Object.prototype.hasOwnProperty.call(subHeaders,letter)).map(([letter])=>'<th>'+esc(subHeaders[letter])+'</th>').join('');
+ $('records').innerHTML='<div class="rv-table-wrap"><table class="rv-table rv-excel-table"><thead>'+letters+'<tr>'+mainHeaders+'<th class="rv-action" rowspan="2">Review Actions</th></tr><tr>'+sub+'</tr></thead><tbody>'+body+'</tbody></table></div>';
  const untagged=groups.filter(g=>!hasValue(g.resolvedTag)&&g.rows.some(isUtMeasurement));
  const linkUi=untagged.map(g=>'<div class="rv-alert rv-linkbox" data-link-source="'+esc(g.eq.id)+'"><strong>Unassigned UT group · '+g.rows.length+' row(s)</strong><span>Link these scan batches to existing equipment:</span><select data-target-tag><option value="">Select Tag PV</option>'+equipment.filter(e=>String(e.tag||'').trim()).map(e=>'<option value="'+esc(e.tag)+'">'+esc(e.tag)+' · '+esc(e.equipment_name||'')+'</option>').join('')+'</select><button class="btn primary" data-link-equipment>Link records</button></div>').join('');
  if(linkUi)$('records').insertAdjacentHTML('afterbegin',linkUi);
 }function render(){document.querySelectorAll('[data-tab]').forEach(b=>b.classList.toggle('active',b.dataset.tab===tab));if(tab==='pending'){if(!pending.length){$('records').innerHTML='<div class="rv-empty">No pending identification records.</div>';return}$('records').innerHTML=pending.map(row=>{const rec=row.record||{},keys=fields[rec._record_type]||fields.documents;return '<article class="rv-card" data-pending="'+esc(row.id)+'"><b>'+esc(row.file_name)+' · '+esc(row.document_type)+'</b><div class="rv-table-wrap"><table class="rv-table"><thead><tr>'+keys.map(k=>'<th>'+esc(labels[k]||k)+'</th>').join('')+'</tr></thead><tbody><tr>'+keys.map(k=>'<td><input data-field="'+k+'" value="'+esc(rec[k]??'')+'"></td>').join('')+'</tr></tbody></table></div><button class="btn primary" data-confirm>Confirm Equipment Tag</button></article>'}).join('');document.querySelectorAll('[data-pending] [data-confirm]').forEach(btn=>btn.addEventListener('click',async()=>{const card=btn.closest('[data-pending]'),row=pending.find(x=>x.id===card.dataset.pending),record={...(row.record||{})};card.querySelectorAll('[data-field]').forEach(el=>record[el.dataset.field]=el.value||null);const tag=String(record.equipment_tag||'').trim();if(!tag){$('notice').textContent='Equipment Tag is required.';return}btn.disabled=true;try{await api('/api/pv/intake/'+encodeURIComponent(row.id),{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify({equipment_tag:tag,record})});tab='all';await load()}catch(e){$('notice').textContent=e.message;btn.disabled=false}}));return}renderCombined()}
+$('records').addEventListener('input',event=>{const input=event.target.closest('[data-edit-field]');if(!input)return;const id=input.dataset.recordId;if(!id)return;const edits=readEdits();edits[id]=edits[id]||{};const letter=input.dataset.editField;const field=cols.find(x=>x[0]===letter)?.[2];if(!field)return;edits[id][field]=input.value;localStorage.setItem('mechasset_pv_review_edits_v1',JSON.stringify(edits));});
 $('records').addEventListener('click',async event=>{
  const linkBtn=event.target.closest('[data-link-equipment]');
  if(linkBtn){
