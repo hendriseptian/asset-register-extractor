@@ -36,7 +36,7 @@ function exportYear(value){const s=normalizeExportDate(value);const m=s.match(/(
 function normalizeExportIdentity(record){
  const r={...record},raw=String(r.year_built??'').trim();
  if(raw.includes('/')){const p=raw.split('/').map(x=>x.trim());if(!r.year_used&&/^\d{4}$/.test(p[1]||''))r.year_used=p[1];if(/^\d{4}$/.test(p[0]||''))r.year_built=p[0]}
- if(!r.year_used&&/^\d{4}$/.test(String(r.date_built??'')))r.year_used=String(r.date_built);
+ // Date Built and Year Used are distinct source fields; never substitute one for the other.
  if(!r.date_built&&/^\d{4}$/.test(String(r.year_built??'')))r.date_built='01/01/'+r.year_built;
  return r;
 }
