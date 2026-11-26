@@ -26,6 +26,20 @@ const esc=v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&
 async function api(path){const base=workerUrl();if(!/^https:\/\//i.test(base))throw new Error('Worker URL belum diatur. Buka Settings / Worker URL terlebih dahulu.');const res=await fetch(base+path);let data={};try{data=await res.json()}catch{}if(!res.ok)throw new Error(data.error||'HTTP '+res.status);return data}
 function readReviewEdits(){try{return JSON.parse(localStorage.getItem('mechasset_pv_review_edits_v1')||'{}')}catch{return {}}}
 function withReviewEdits(row){return {...(row.record||{}),...(readReviewEdits()[String(row.record_id||'')]||{})}}
+function normalizeExportDate(value){
+ if(value===null||value===undefined||String(value).trim()==='')return '';
+ const s=String(value).trim();let m=s.match(/^(\d{1,2})[\/.-](\d{1,2})[\/.-](\d{4})$/);
+ if(m)return String(m[1]).padStart(2,'0')+'/'+String(m[2]).padStart(2,'0')+'/'+m[3];
+ m=s.match(/^(\d{4})-(\d{2})-(\d{2})/);if(m)return m[3]+'/'+m[2]+'/'+m[1];return s;
+}
+function exportYear(value){const s=normalizeExportDate(value);const m=s.match(/(?:^|\/)(\d{4})$/);return m?m[1]:''}
+function normalizeExportIdentity(record){
+ const r={...record},raw=String(r.year_built??'').trim();
+ if(raw.includes('/')){const p=raw.split('/').map(x=>x.trim());if(!r.year_used&&/^\d{4}$/.test(p[1]||''))r.year_used=p[1];if(/^\d{4}$/.test(p[0]||''))r.year_built=p[0]}
+ if(!r.year_used&&/^\d{4}$/.test(String(r.date_built??'')))r.year_used=String(r.date_built);
+ if(!r.date_built&&/^\d{4}$/.test(String(r.year_built??'')))r.date_built='01/01/'+r.year_built;
+ return r;
+}
 function normalizeTag(v){return String(v??'').normalize('NFKC').toLowerCase().replace(/[^a-z0-9]/g,'')}
 function updateCounts(){const selected=registers;const rows=selected.flatMap(x=>x.records||[]);$('count-eq').textContent=selected.length;$('count-doc').textContent=new Set(rows.filter(r=>r.record_type==='document').map(r=>r.document_id)).size;$('count-prev').textContent=rows.filter(r=>r.record_type==='previous_ut').length;$('count-last').textContent=rows.filter(r=>r.record_type==='last_ut').length}
 async function loadData(){ $('load').disabled=true;$('reload').disabled=true;$('export').disabled=true;$('status').textContent='Loading equipment and persisted PV records from D1…';try{const e=await api('/api/pv/equipment');equipment=e.equipment||[];if(!equipment.length){registers=[];$('equipment').innerHTML='<option value="all">All PV Equipment</option>';$('equipment').disabled=false;updateCounts();$('status').textContent='No PV equipment found in this Worker database.';return}const id=$('equipment').value; $('equipment').innerHTML='<option value="all">All PV Equipment ('+equipment.length+')</option>'+equipment.map(x=>'<option value="'+esc(x.id)+'">'+esc(x.tag||'No Tag')+' — '+esc(x.equipment_name||'Unnamed')+'</option>').join('');$('equipment').disabled=false;if(id&&id!=='all'&&equipment.some(x=>x.id===id))$('equipment').value=id;const targets=$('equipment').value==='all'?equipment:equipment.filter(x=>x.id===$('equipment').value);const loaded=await Promise.all(targets.map(x=>api('/api/pv/register?equipment_id='+encodeURIComponent(x.id))));registers=loaded;updateCounts();$('status').textContent='Loaded '+registers.length+' PV equipment record(s) from D1. Review status is shown in the exported workbook.';$('reload').disabled=false;$('export').disabled=false;}catch(e){$('status').textContent='Load failed: '+e.message;}finally{$('load').disabled=false}}
@@ -37,7 +51,7 @@ function exportWorkbook(){
  for(const reg of registers){
   const e=reg.equipment||{},identity=typeof e.identity_json==='string'?(()=>{try{return JSON.parse(e.identity_json||'{}')}catch{return {}}})():(e.identity_json||{});
   const all=(reg.records||[]).map(row=>({...row,record:withReviewEdits(row)}));
-  const docs=all.filter(x=>x.record_type==='document'),doc={...identity};
+  const docs=all.filter(x=>!['previous_ut','last_ut'].includes(x.record_type)),doc=normalizeExportIdentity({...identity});
   for(const d of docs)for(const [k,v] of Object.entries(d.record||{}))if(!k.startsWith('_')&&v!==null&&v!==''&&(doc[k]===undefined||doc[k]===null||doc[k]===''))doc[k]=v;
   for(const [k,v] of Object.entries({equipment_tag:e.tag,equipment_name:e.equipment_name,serial_number:e.serial_number,owner_operator:e.owner_operator,location:e.location}))if((doc[k]===undefined||doc[k]===null||doc[k]==='')&&v!==null&&v!==undefined&&v!=='')doc[k]=v;
   const tag=e.tag||doc.equipment_tag||'',key=normalizeTag(tag)||('id:'+e.id);
@@ -51,11 +65,17 @@ function exportWorkbook(){
  let equipmentNo=0,rowNum=5;const merges=[];
  for(const g of groups.values()){
   equipmentNo++;const ut=g.rows.filter(x=>['previous_ut','last_ut'].includes(x.record_type)&&(x.record.component||x.record.thickness_reading||x.record.measurement_point));
-  const docs=g.rows.filter(x=>x.record_type==='document'),display=ut.length?ut:(docs.length?docs:[{record_type:'document',record:g.doc}]);
+  const prev=g.rows.filter(x=>x.record_type==='previous_ut').map(x=>x.record||{}).find(x=>x.inspection_date||x.report_date)||{};
+  const last=g.rows.filter(x=>x.record_type==='last_ut').map(x=>x.record||{}).find(x=>x.inspection_date||x.report_date)||{};
+  const docs=g.rows.filter(x=>!['previous_ut','last_ut'].includes(x.record_type)),display=ut.length?ut:(docs.length?docs:[{record_type:'document',record:g.doc}]);
   const first=rowNum;
   for(const row of display){
-   const r={...g.doc};for(const [field,value] of Object.entries(row.record||{}))if(value!==null&&value!==undefined&&String(value).trim()!=='')r[field]=value;const v=(k,fallback='')=>r[k]!==null&&r[k]!==undefined&&String(r[k]).trim()!==''?r[k]:fallback;
-   matrix.push([equipmentNo,g.tag||v('equipment_tag'),v('component'),v('equipment_name',g.e.equipment_name),v('owner_operator',g.e.owner_operator),v('location',g.e.location),v('equipment_type'),v('serial_number',g.e.serial_number),v('manufacturer'),v('diameter_value',v('diameter')),v('diameter_unit'),v('length_or_height',v('length')),v('length_unit'),v('height_wide',v('height_width')),v('height_wide_unit',v('height_unit')),v('corrosion_allowance'),v('design_code'),v('material_type',v('material')),v('material_detail',v('material_shell',v('material_head'))),v('year_built'),v('date_built'),v('year_used'),v('previous_inspection',v('previous_inspection_year')),v('last_inspection',v('last_inspection_year')),v('inspection_date'),v('nominal_thickness'),v('previous_thickness'),v('actual_thickness',(['previous_ut','last_ut'].includes(row.record_type)?v('thickness_reading'):'')),v('design_pressure'),v('mawp'),v('hydrotest_pressure'),v('operating_pressure'),v('design_temperature'),v('operating_temperature'),v('fluid_service')]);
+   const r={...g.doc};for(const [field,value] of Object.entries(row.record||{}))if(value!==null&&value!==undefined&&String(value).trim()!=='')r[field]=value;
+   r.previous_inspection=exportYear(prev.inspection_date||prev.report_date);
+   r.last_inspection=exportYear(last.inspection_date||last.report_date);
+   r.inspection_date=normalizeExportDate(last.inspection_date||last.report_date);
+   const v=(k,fallback='')=>r[k]!==null&&r[k]!==undefined&&String(r[k]).trim()!==''?r[k]:fallback;
+   matrix.push([equipmentNo,g.tag||v('equipment_tag'),v('component'),v('equipment_name',g.e.equipment_name),v('owner_operator',g.e.owner_operator),v('location',g.e.location),v('equipment_type'),v('serial_number',g.e.serial_number),v('manufacturer'),v('diameter_value',v('diameter')),v('diameter_unit'),v('length_or_height',v('length')),v('length_unit'),v('height_wide',v('height_width')),v('height_wide_unit',v('height_unit')),v('corrosion_allowance'),v('design_code'),v('material_type',v('material')),v('material_detail',v('material_shell',v('material_head'))),v('year_built'),v('date_built'),v('year_used'),v('previous_inspection'),v('last_inspection'),v('inspection_date'),v('nominal_thickness'),v('previous_thickness'),v('actual_thickness',(['previous_ut','last_ut'].includes(row.record_type)?v('thickness_reading'):'')),v('design_pressure'),v('mawp'),v('hydrotest_pressure'),v('operating_pressure'),v('design_temperature'),v('operating_temperature'),v('fluid_service')]);
    rowNum++;
   }
   if(display.length>1)for(const col of [0,1])merges.push({s:{r:first-1,c:col},e:{r:rowNum-2,c:col}});
