@@ -125,13 +125,14 @@ function renderCombined(){
  const groups=[...buckets.values()].map(bucket=>{
   const all=bucket.items.flatMap(item=>item.all),identities=bucket.items.map(item=>({record:item.identity}));
   const documents=all.filter(r=>r.record_type==='document'),base=mergedDoc([...identities,...documents]);
-  const primary=bucket.items.find(item=>hasValue(item.eq.tag))||bucket.items[0];
-  const eq=primary?.eq||{};
+  const identityScore=item=>[item.eq.equipment_name,item.eq.serial_number,item.eq.owner_operator,item.eq.location,...Object.values(item.identity||{})].filter(hasValue).length;
+  const primary=[...bucket.items].sort((a,b)=>identityScore(b)-identityScore(a))[0]||bucket.items[0];
+  const eq=primary?.eq||bucket.eq||{};
   const identityFallback={equipment_tag:eq.tag||bucket.resolvedTag,equipment_name:eq.equipment_name,serial_number:eq.serial_number,owner_operator:eq.owner_operator,location:eq.location};
   for(const [field,value] of Object.entries(identityFallback))if(!hasValue(base[field])&&hasValue(value))base[field]=value;
   if(!hasValue(base.equipment_tag)&&hasValue(bucket.resolvedTag))base.equipment_tag=bucket.resolvedTag;
   const ut=all.filter(isUtMeasurement),rows=ut.length?ut:(documents.length?documents:[{record_id:'',record_type:'document',record:base}]);
-  return {eq:bucket.eq,all,base,rows,resolvedTag:bucket.resolvedTag};
+  return {eq,all,base,rows,resolvedTag:bucket.resolvedTag};
  }).filter(g=>g.rows.length);
  if(!groups.length){$('records').innerHTML='<div class="rv-empty">No PV records found. Scan a Datasheet or UT report first.</div>';return}
  let n=0;
