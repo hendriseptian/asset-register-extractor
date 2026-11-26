@@ -92,7 +92,15 @@ function readEdits(){try{return JSON.parse(localStorage.getItem('mechasset_pv_re
 function applyEdits(recordId,record){const edits=readEdits()[String(recordId||'')]||{};return {...record,...edits}}
 function valueFor(key,rec,eq,base,row,index){
  if(key==='A')return index+1;
- if(key==='B')return eq.tag||base.equipment_tag||'';
+ if(key==='B')return eq.tag||base.equipment_tag||rec.equipment_tag||'';
+ // Identity fields must fall back to the equipment row from D1, not only the extracted document.
+ const identityFallback={component:['component','part'],equipment_name:['equipment_name'],owner_operator:['owner_operator'],location:['location'],equipment_type:['equipment_type'],serial_number:['serial_number'],manufacturer:['manufacturer','manufacture']};
+ if(identityFallback[key]){
+  for(const field of identityFallback[key])if(hasValue(rec[field]))return rec[field];
+  const equipmentField=key==='component'?null:key;
+  if(equipmentField&&hasValue(eq[equipmentField]))return eq[equipmentField];
+  if(equipmentField&&hasValue(base[equipmentField]))return base[equipmentField];
+ }
  if(key==='J'&& !hasValue(rec.diameter)&&hasValue(rec.diameter_value))return rec.diameter_value;
  if(key==='K'&& !hasValue(rec.diameter_unit)&&hasValue(rec.diameter))return (String(rec.diameter).match(/\b(mm|cm|m|inch|in)\b/i)||[])[1]||'';
  if(key==='L'&&!hasValue(rec.length_or_height)&&hasValue(rec.length))return rec.length;
@@ -136,7 +144,8 @@ function renderCombined(){
  });
  const groups=[...buckets.values()].map(bucket=>{
   const all=bucket.items.flatMap(item=>item.all),identities=bucket.items.map(item=>({record:item.identity}));
-  const documents=all.filter(r=>r.record_type==='document'),base=mergedDoc([...identities,...documents]);
+  // Merge every non-UT extraction as identity/source data; older records may use legacy document_type values.
+  const documents=all.filter(r=>!['previous_ut','last_ut'].includes(r.record_type)),base=mergedDoc([...identities,...documents]);
   const eq={...bucket.eq};
   for(const item of bucket.items){
    for(const field of ['equipment_name','serial_number','owner_operator','location','tag'])if(!hasValue(eq[field])&&hasValue(item.eq?.[field]))eq[field]=item.eq[field];
