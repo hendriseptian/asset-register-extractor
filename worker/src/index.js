@@ -424,6 +424,7 @@ export default {
             return json(request, { error: 'file_name and records[] (1-100) are required.' }, 400);
           }
           const outcomes = [];
+          const documentIds = new Map();
           for (const record of records) {
             if (!record || typeof record !== 'object' || Array.isArray(record) || JSON.stringify(record).length > 60000) {
               return json(request, { error: 'Each extracted record must be a JSON object up to 60 KB.' }, 400);
@@ -459,15 +460,17 @@ export default {
                 "UPDATE equipment SET serial_number = CASE WHEN serial_number IS NULL OR trim(serial_number) = '' THEN ? ELSE serial_number END, equipment_name = CASE WHEN equipment_name IS NULL OR trim(equipment_name) = '' THEN ? ELSE equipment_name END, owner_operator = CASE WHEN owner_operator IS NULL OR trim(owner_operator) = '' THEN ? ELSE owner_operator END, location = CASE WHEN location IS NULL OR trim(location) = '' THEN ? ELSE location END, identity_json = ?, updated_at = strftime('%Y-%m-%dT%H:%M:%fZ', 'now') WHERE id = ?"
               ).bind(record.serial_number || null, record.equipment_name || null, record.owner_operator || null, record.location || null, JSON.stringify(mergedIdentity), equipment.id).run();
             }
-            const documentId = crypto.randomUUID();
-            await env.DB.batch([
-              env.DB.prepare(
-                'INSERT INTO pv_documents (id, equipment_id, document_type, file_name, mime_type, extraction_model) VALUES (?, ?, ?, ?, ?, ?)'
-              ).bind(documentId, equipment.id, documentType, fileName, mimeType, modelName),
-              env.DB.prepare(
-                "INSERT INTO pv_extracted_records (id, document_id, equipment_id, record_type, record_json) VALUES (?, ?, ?, ?, ?)"
-              ).bind(crypto.randomUUID(), documentId, equipment.id, recordType, JSON.stringify(record))
-            ]);
+            let documentId = documentIds.get(equipment.id);
+            if (!documentId) {
+              documentId = crypto.randomUUID();
+              await env.DB.prepare(
+                'INSERT INTO pv_documents (id, equipment_id, document_type, period, file_name, mime_type, extraction_model) VALUES (?, ?, ?, ?, ?, ?, ?)'
+              ).bind(documentId, equipment.id, documentType, recordType === 'previous_ut' ? 'previous' : recordType === 'last_ut' ? 'last' : null, fileName, mimeType, modelName).run();
+              documentIds.set(equipment.id, documentId);
+            }
+            await env.DB.prepare(
+              "INSERT INTO pv_extracted_records (id, document_id, equipment_id, record_type, record_json) VALUES (?, ?, ?, ?, ?)"
+            ).bind(crypto.randomUUID(), documentId, equipment.id, recordType, JSON.stringify(record)).run();
             outcomes.push({ status: created ? 'draft_created' : 'matched_existing', equipment_id: equipment.id, equipment_tag: equipment.tag, document_id: documentId });
           }
           return json(request, { ok: true, outcomes, saved: outcomes.filter(x => x.status !== 'pending_identification').length, pending_identification: outcomes.filter(x => x.status === 'pending_identification').length }, 201);
