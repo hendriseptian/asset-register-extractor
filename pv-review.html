@@ -45,8 +45,8 @@ html,body{width:100%;min-width:0;margin:0}
 <footer class="site-footer"><p class="footer-note">Human review is required. Verify every engineering value against the original source report before acceptance.</p><div class="footer-watermark">Designed &amp; Developed by <strong>Hendri Septian</strong> <span>© 2026</span></div></footer></main></div>
 <script>
 (()=>{const $=id=>document.getElementById(id);const workerUrl=()=>((localStorage.getItem('are_worker_url')||'').trim().replace(/\/$/,''));const params=new URLSearchParams(location.search);let equipment=[],records=[],pending=[],tab=params.get('tab')==='pending'?'pending':'all';
-const fields={documents:['equipment_tag','equipment_name','equipment_type','manufacturer','model','serial_number','year_built','owner_operator','location','design_code','design_pressure','design_temperature','mawp','operating_pressure','operating_temperature','volume','diameter','length_or_height','material_shell','material_head','corrosion_allowance','nominal_thickness','inspection_date','inspection_summary','document_reference'],previous_ut:['equipment_tag','report_date','inspection_date','component','measurement_location','measurement_point','thickness_reading','thickness_unit','corrosion_rate','remaining_life','remarks'],last_ut:['equipment_tag','report_date','inspection_date','component','measurement_location','measurement_point','thickness_reading','thickness_unit','corrosion_rate','remaining_life','remarks']};
-const labels={equipment_tag:'Equipment Tag',equipment_name:'Equipment Name',equipment_type:'Equipment Type',manufacturer:'Manufacturer',model:'Model',serial_number:'Serial Number',year_built:'Year Built',owner_operator:'Owner / Operator',location:'Location',design_code:'Design Code',design_pressure:'Design Pressure',design_temperature:'Design Temperature',mawp:'MAWP',operating_pressure:'Operating Pressure',operating_temperature:'Operating Temperature',volume:'Volume',diameter:'Diameter',length_or_height:'Length / Height',material_shell:'Shell Material',material_head:'Head Material',corrosion_allowance:'Corrosion Allowance',nominal_thickness:'Nominal Thickness',inspection_date:'Inspection Date',inspection_summary:'Inspection Summary',document_reference:'Document Reference',report_date:'Report Date',component:'Component',measurement_location:'Measurement Location',measurement_point:'Measurement Point',thickness_reading:'Thickness Reading',thickness_unit:'Thickness Unit',corrosion_rate:'Corrosion Rate',remaining_life:'Remaining Life',remarks:'Remarks'};
+const fields={documents:['equipment_tag','equipment_name','equipment_type','manufacturer','model','serial_number','year_built','owner_operator','location','joint_efficiency','radiography','design_code','design_pressure','design_temperature','mawp','operating_pressure','operating_temperature','volume','diameter','length_or_height','material_shell','material_head','corrosion_allowance','nominal_thickness','inspection_date','inspection_summary','document_reference'],previous_ut:['equipment_tag','report_date','inspection_date','component','measurement_location','measurement_point','thickness_reading','thickness_unit','corrosion_rate','remaining_life','remarks'],last_ut:['equipment_tag','report_date','inspection_date','component','measurement_location','measurement_point','thickness_reading','thickness_unit','corrosion_rate','remaining_life','remarks']};
+const labels={equipment_tag:'Equipment Tag',equipment_name:'Equipment Name',equipment_type:'Equipment Type',manufacturer:'Manufacturer',model:'Model',serial_number:'Serial Number',joint_efficiency:'Joint Efficiency',radiography:'Radiography',year_built:'Year Built',owner_operator:'Owner / Operator',location:'Location',design_code:'Design Code',design_pressure:'Design Pressure',design_temperature:'Design Temperature',mawp:'MAWP',operating_pressure:'Operating Pressure',operating_temperature:'Operating Temperature',volume:'Volume',diameter:'Diameter',length_or_height:'Length / Height',material_shell:'Shell Material',material_head:'Head Material',corrosion_allowance:'Corrosion Allowance',nominal_thickness:'Nominal Thickness',inspection_date:'Inspection Date',inspection_summary:'Inspection Summary',document_reference:'Document Reference',report_date:'Report Date',component:'Component',measurement_location:'Measurement Location',measurement_point:'Measurement Point',thickness_reading:'Thickness Reading',thickness_unit:'Thickness Unit',corrosion_rate:'Corrosion Rate',remaining_life:'Remaining Life',remarks:'Remarks'};
 const esc=v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 async function api(path,options={}){const base=workerUrl();if(!/^https:\/\//i.test(base))throw new Error('Worker URL is not configured. Open Settings / Worker URL.');const res=await fetch(base+path,{cache:'no-store',...options});let data={};try{data=await res.json()}catch{}if(!res.ok)throw new Error(data.error||'HTTP '+res.status);return data}
 async function load(){
@@ -86,6 +86,7 @@ function updateSummary(){$('docs-count').textContent=records.filter(r=>r.record_
 function equipmentIdentity(eq){try{return typeof eq.identity_json==='string'?JSON.parse(eq.identity_json||'{}'):(eq.identity_json||{})}catch{return {}}}
 function hasValue(v){return v!==null&&v!==undefined&&String(v).trim()!==''}
 function normalizeEquipmentTag(v){return String(v??'').normalize('NFKC').toLowerCase().replace(/[^a-z0-9]/g,'')}
+function normalizeJointEfficiency(record){const je=String(record?.joint_efficiency??'').trim().replace(/,/g,'.').replace(/[^0-9.]/g,''),rt=String(record?.radiography??'').toUpperCase().replace(/[^A-Z]/g,'');const a={'1':'FULL','1.0':'FULL','0.8':'SPOT','0.80':'SPOT','0.75':'NONE'},b={FULL:'1',SPOT:'0.8',NONE:'0.75'};return {joint_efficiency:je?(a[je]?je:String(record.joint_efficiency).trim()):(b[rt]||''),radiography:rt?(a[je]||(['FULL','SPOT','NONE'].includes(rt)?rt:String(record.radiography).trim())):(a[je]||'')}}
 function recordObject(row){
  let value=row?.record;
  if(typeof value==='string'){try{value=JSON.parse(value)}catch{value={}}}
@@ -94,7 +95,7 @@ function recordObject(row){
  }
  if(!value||typeof value!=='object'||Array.isArray(value))value={};
  for(const key of ['record','fields','data','extracted_data','measurement','result'])if(value[key]&&typeof value[key]==='object'&&!Array.isArray(value[key]))value={...value,...value[key]};
- const aliases={equipment_tag:['equipment_tag','tag_pv','tag'],equipment_name:['equipment_name','name_of_equipment'],equipment_type:['equipment_type','pv_type'],owner_operator:['owner_operator','owner','operator'],location:['location','location_platform','platform'],serial_number:['serial_number','serial_no'],manufacturer:['manufacturer','manufacture'],component:['component','part','part_name','component_name','identification'],thickness_reading:['thickness_reading','least_point','least_point_mm','minimum_thickness','min_thickness','actual_thickness'],measurement_location:['measurement_location','location_of_measurement'],measurement_point:['measurement_point','point_of_measurement']};
+ const aliases={equipment_tag:['equipment_tag','tag_pv','tag'],equipment_name:['equipment_name','name_of_equipment'],equipment_type:['equipment_type','pv_type'],owner_operator:['owner_operator','owner','operator'],location:['location','location_platform','platform'],serial_number:['serial_number','serial_no'],joint_efficiency:['joint_efficiency','joint efficiency','joint_eff','efficiency'],radiography:['radiography','radiographic_test','radiographic_examination','rt'],manufacturer:['manufacturer','manufacture'],component:['component','part','part_name','component_name','identification'],thickness_reading:['thickness_reading','least_point','least_point_mm','minimum_thickness','min_thickness','actual_thickness'],measurement_location:['measurement_location','location_of_measurement'],measurement_point:['measurement_point','point_of_measurement']};
  for(const [target,names] of Object.entries(aliases))if(!hasValue(value[target])){const found=names.map(k=>value[k]).find(hasValue);if(hasValue(found))value[target]=found}
  return value;
 }
@@ -146,10 +147,10 @@ function reportDateOf(record){
 function mergedDoc(rows){const out={};for(const r of rows){for(const [k,v] of Object.entries(recordObject(r))){if(!k.startsWith('_')&&hasValue(v)&&(out[k]===undefined||!hasValue(out[k])))out[k]=v}}return out}
 function isUtMeasurement(r){const rec=recordObject(r);return ['previous_ut','last_ut'].includes(r.record_type)&&(hasValue(rec.component)||hasValue(rec.thickness_reading)||hasValue(rec.measurement_location)||hasValue(rec.measurement_point))}
 const cols=[
- ['A','No.','',null],['B','Tag PV','',null],['C','Part','component'],['D','Equipment Name','equipment_name'],['E','Owner / Operator','owner_operator'],['F','Location / Platform','location'],['G','PV type','equipment_type'],['H','Serial No.','serial_number'],['I','Manufacture','manufacturer'],['J','Diameter','diameter'],['K','','diameter_unit'],['L','Length','length_or_height'],['M','','length_unit'],['N','Height/Wide','height_wide'],['O','','height_wide_unit'],['P','Corrosion Allowance (mm)','corrosion_allowance'],['Q','Design Code','design_code'],['R','Material','material_type'],['S','','material_detail'],['T','Year','year_built'],['U','','date_built'],['V','','year_used'],['W','Inspection','previous_inspection'],['X','','last_inspection'],['Y','','inspection_date'],['Z','Thickness (mm)','nominal_thickness'],['AA','','previous_thickness'],['AB','','actual_thickness'],['AC','Pressure (kg/)','design_pressure'],['AD','','mawp'],['AE','','hydrotest_pressure'],['AF','','operating_pressure'],['AG','Temperature (℃)','design_temperature'],['AH','','operating_temperature'],['AI','Fluid Service','fluid_service']
+ ['A','No.','',null],['B','Tag PV','',null],['C','Part','component'],['D','Equipment Name','equipment_name'],['E','Owner / Operator','owner_operator'],['F','Location / Platform','location'],['G','PV type','equipment_type'],['H','Serial No.','serial_number'],['I','Manufacture','manufacturer'],['J','Diameter','diameter'],['K','','diameter_unit'],['L','Length','length_or_height'],['M','','length_unit'],['N','Height/Wide','height_wide'],['O','','height_wide_unit'],['P','Corrosion Allowance (mm)','corrosion_allowance'],['Q','Joint Efficiency','joint_efficiency'],['R','Radiography','radiography'],['S','Design Code','design_code'],['T','Material','material_type'],['U','','material_detail'],['V','Year','year_built'],['W','','date_built'],['X','','year_used'],['Y','Inspection','previous_inspection'],['Z','','last_inspection'],['AA','','inspection_date'],['AB','Thickness (mm)','nominal_thickness'],['AC','','previous_thickness'],['AD','','actual_thickness'],['AE','Pressure (kg/)','design_pressure'],['AF','','mawp'],['AG','','hydrotest_pressure'],['AH','','operating_pressure'],['AI','Temperature (℃)','design_temperature'],['AJ','','operating_temperature'],['AK','Fluid Service','fluid_service']
 ];
-const headerGroups=[['A','No.',1],['B','Tag PV',1],['C','Part',1],['D','Equipment Name',1],['E','Owner / Operator',1],['F','Location / Platform',1],['G','PV type',1],['H','Serial No.',1],['I','Manufacture',1],['J','Diameter',2],['L','Length',2],['N','Height/Wide',2],['P','Corrosion Allowance (mm)',1],['Q','Design Code',1],['R','Material',2],['T','Year',3],['W','Inspection',3],['Z','Thickness (mm)',3],['AC','Pressure (kg/)',4],['AG','Temperature (℃)',2],['AI','Fluid Service',1]];
-const subHeaders={J:'Value',K:'Unit',L:'Value',M:'Unit',N:'Value',O:'Unit',R:'Type',S:'Detail',T:'Built',U:'Date Built',V:'Used',W:'Previous Inspection',X:'last Inspection',Y:'Date',Z:'Nominal Thickness',AA:'Previous Thickness',AB:'Actual Thickness',AC:'Design',AD:'MAWP',AE:'HydroTest',AF:'Operating',AG:'Design',AH:'Operating'};
+const headerGroups=[['A','No.',1],['B','Tag PV',1],['C','Part',1],['D','Equipment Name',1],['E','Owner / Operator',1],['F','Location / Platform',1],['G','PV type',1],['H','Serial No.',1],['I','Manufacture',1],['J','Diameter',2],['L','Length',2],['N','Height/Wide',2],['P','Corrosion Allowance (mm)',1],['Q','Joint Efficiency',1],['R','Radiography',1],['S','Design Code',1],['T','Material',2],['V','Year',3],['Y','Inspection',3],['AB','Thickness (mm)',3],['AE','Pressure (kg/)',4],['AI','Temperature (℃)',2],['AK','Fluid Service',1]];
+const subHeaders={J:'Value',K:'Unit',L:'Value',M:'Unit',N:'Value',O:'Unit',T:'Type',U:'Detail',V:'Built',W:'Date Built',X:'Used',Y:'Previous Inspection',Z:'last Inspection',AA:'Date',AB:'Nominal Thickness',AC:'Previous Thickness',AD:'Actual Thickness',AE:'Design',AF:'MAWP',AG:'HydroTest',AH:'Operating',AI:'Design',AJ:'Operating'};
 const columnLetters=cols.map(x=>x[0]);
 function readEdits(){try{return JSON.parse(localStorage.getItem('mechasset_pv_review_edits_v1')||'{}')}catch{return {}}}
 function applyEdits(recordId,record){const edits=readEdits()[String(recordId||'')]||{};return {...record,...edits}}
@@ -170,24 +171,27 @@ function valueFor(key,rec,eq,base,row,index){
  if(key==='M'&&!hasValue(rec.length_unit)&&hasValue(rec.length_or_height))return (String(rec.length_or_height).match(/\b(mm|cm|m)\b/i)||[])[1]||'';
  if(key==='N')return rec.height_wide??rec.height_width??'';
  if(key==='O')return rec.height_wide_unit??rec.height_unit??'';
- if(key==='R')return rec.material_type??rec.material??'';
- if(key==='S')return rec.material_detail??rec.material_shell??rec.material_head??'';
- if(key==='T')return rec.year_built??'';
- if(key==='U')return rec.date_built??'';
- if(key==='V')return rec.year_used??'';
- if(key==='W')return rec.previous_inspection??rec.previous_inspection_year??'';
- if(key==='X')return rec.last_inspection??rec.last_inspection_year??'';
- if(key==='Y')return normalizeRegisterDate(rec.inspection_date??'');
- if(key==='Z')return rec.nominal_thickness??'';
- if(key==='AA')return rec.previous_thickness??(row.record_type==='previous_ut'?rec.thickness_reading:'')??'';
- if(key==='AB')return rec.actual_thickness??(row.record_type==='last_ut'?rec.thickness_reading:'')??'';
- if(key==='AC')return rec.design_pressure??'';
- if(key==='AD')return rec.mawp??'';
- if(key==='AE')return rec.hydrotest_pressure??'';
- if(key==='AF')return rec.operating_pressure??'';
- if(key==='AG')return rec.design_temperature??'';
- if(key==='AH')return rec.operating_temperature??'';
- if(key==='AI')return rec.fluid_service??'';
+ if(key==='Q')return normalizeJointEfficiency(rec).joint_efficiency;
+ if(key==='R')return normalizeJointEfficiency(rec).radiography;
+ if(key==='S')return rec.design_code??'';
+ if(key==='T')return rec.material_type??rec.material??'';
+ if(key==='U')return rec.material_detail??rec.material_shell??rec.material_head??'';
+ if(key==='V')return rec.year_built??'';
+ if(key==='W')return rec.date_built??'';
+ if(key==='X')return rec.year_used??'';
+ if(key==='Y')return rec.previous_inspection??rec.previous_inspection_year??'';
+ if(key==='Z')return rec.last_inspection??rec.last_inspection_year??'';
+ if(key==='AA')return normalizeRegisterDate(rec.inspection_date??'');
+ if(key==='AB')return rec.nominal_thickness??'';
+ if(key==='AC')return rec.previous_thickness??(row.record_type==='previous_ut'?rec.thickness_reading:'')??'';
+ if(key==='AD')return rec.actual_thickness??(row.record_type==='last_ut'?rec.thickness_reading:'')??'';
+ if(key==='AE')return rec.design_pressure??'';
+ if(key==='AF')return rec.mawp??'';
+ if(key==='AG')return rec.hydrotest_pressure??'';
+ if(key==='AH')return rec.operating_pressure??'';
+ if(key==='AI')return rec.design_temperature??'';
+ if(key==='AJ')return rec.operating_temperature??'';
+ if(key==='AK')return rec.fluid_service??'';
  return rec[key]??'';
 }
 function renderCombined(){
