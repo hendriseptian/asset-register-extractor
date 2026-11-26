@@ -37,7 +37,7 @@ function normalizeExportIdentity(record){
  const r={...record},raw=String(r.year_built??'').trim();
  if(raw.includes('/')){const p=raw.split('/').map(x=>x.trim());if(!r.year_used&&/^\d{4}$/.test(p[1]||''))r.year_used=p[1];if(/^\d{4}$/.test(p[0]||''))r.year_built=p[0]}
  // Date Built and Year Used are distinct source fields; never substitute one for the other.
- if(!r.date_built&&/^\d{4}$/.test(String(r.year_built??'')))r.date_built='01/01/'+r.year_built;
+ // Do not invent a day/month when the source only provides a year.
  return r;
 }
 function normalizeTag(v){return String(v??'').normalize('NFKC').toLowerCase().replace(/[^a-z0-9]/g,'')}
@@ -64,18 +64,36 @@ function exportWorkbook(){
  const matrix=[['PV',null,null,null,null,null,'INFORMATION DATA PV'],Array(35).fill(null),h3,h4];
  let equipmentNo=0,rowNum=5;const merges=[];
  for(const g of groups.values()){
-  equipmentNo++;const ut=g.rows.filter(x=>['previous_ut','last_ut'].includes(x.record_type)&&(x.record.component||x.record.thickness_reading||x.record.measurement_point));
-  const prev=g.rows.filter(x=>x.record_type==='previous_ut').map(x=>x.record||{}).find(x=>x.inspection_date||x.report_date)||{};
-  const last=g.rows.filter(x=>x.record_type==='last_ut').map(x=>x.record||{}).find(x=>x.inspection_date||x.report_date)||{};
-  const docs=g.rows.filter(x=>!['previous_ut','last_ut'].includes(x.record_type)),display=ut.length?ut:(docs.length?docs:[{record_type:'document',record:g.doc}]);
+  equipmentNo++;
+  const previousRows=g.rows.filter(x=>x.record_type==='previous_ut'),lastRows=g.rows.filter(x=>x.record_type==='last_ut');
+  const docs=g.rows.filter(x=>!['previous_ut','last_ut'].includes(x.record_type));
+  const partMap=new Map();
+  for(const source of [...previousRows,...lastRows]){
+   const rec=source.record||{},part=String(rec.component||rec.part||rec.measurement_point||rec.identification||'').trim();
+   if(!part)continue;
+   const key=normalizeTag(part);
+   if(!partMap.has(key))partMap.set(key,{part,previous:[],last:[]});
+   partMap.get(key)[source.record_type==='previous_ut'?'previous':'last'].push(source);
+  }
+  const newest=list=>list.slice().sort((a,b)=>String(b.created_at||b.document_created_at||'').localeCompare(String(a.created_at||a.document_created_at||'')))[0];
+  let display;
+  if(partMap.size){
+   display=[...partMap.values()].map(part=>{
+    const prevRow=newest(part.previous),lastRow=newest(part.last),prevRec=prevRow?.record||{},lastRec=lastRow?.record||{};
+    const combined={...g.doc,...prevRec,...lastRec,component:part.part,
+     previous_thickness:prevRec.thickness_reading??prevRec.previous_thickness??'',
+     actual_thickness:lastRec.thickness_reading??lastRec.actual_thickness??'',
+     previous_inspection:exportYear(prevRec.inspection_date||prevRec.report_date),
+     last_inspection:exportYear(lastRec.inspection_date||lastRec.report_date),
+     inspection_date:normalizeExportDate(lastRec.inspection_date||lastRec.report_date)};
+    return {record_type:'combined_ut',record:combined};
+   });
+  }else display=docs.length?docs.map(x=>({record_type:x.record_type,record:{...g.doc,...(x.record||{})}}):[{record_type:'document',record:g.doc}];
   const first=rowNum;
-  for(const row of display){
-   const r={...g.doc};for(const [field,value] of Object.entries(row.record||{}))if(value!==null&&value!==undefined&&String(value).trim()!=='')r[field]=value;
-   r.previous_inspection=exportYear(prev.inspection_date||prev.report_date);
-   r.last_inspection=exportYear(last.inspection_date||last.report_date);
-   r.inspection_date=normalizeExportDate(last.inspection_date||last.report_date);
+  for(let index=0;index<display.length;index++){
+   const row=display[index],r={...g.doc};for(const [field,value] of Object.entries(row.record||{}))if(value!==null&&value!==undefined&&String(value).trim()!=='')r[field]=value;
    const v=(k,fallback='')=>r[k]!==null&&r[k]!==undefined&&String(r[k]).trim()!==''?r[k]:fallback;
-   matrix.push([equipmentNo,g.tag||v('equipment_tag'),v('component'),v('equipment_name',g.e.equipment_name),v('owner_operator',g.e.owner_operator),v('location',g.e.location),v('equipment_type'),v('serial_number',g.e.serial_number),v('manufacturer'),v('diameter_value',v('diameter')),v('diameter_unit'),v('length_or_height',v('length')),v('length_unit'),v('height_wide',v('height_width')),v('height_wide_unit',v('height_unit')),v('corrosion_allowance'),v('design_code'),v('material_type',v('material')),v('material_detail',v('material_shell',v('material_head'))),v('year_built'),v('date_built'),v('year_used'),v('previous_inspection'),v('last_inspection'),v('inspection_date'),v('nominal_thickness'),v('previous_thickness'),v('actual_thickness',(['previous_ut','last_ut'].includes(row.record_type)?v('thickness_reading'):'')),v('design_pressure'),v('mawp'),v('hydrotest_pressure'),v('operating_pressure'),v('design_temperature'),v('operating_temperature'),v('fluid_service')]);
+   matrix.push([index===0?equipmentNo:'',index===0?(g.tag||v('equipment_tag')):'',v('component'),v('equipment_name',g.e.equipment_name),v('owner_operator',g.e.owner_operator),v('location',g.e.location),v('equipment_type'),v('serial_number',g.e.serial_number),v('manufacturer'),v('diameter_value',v('diameter')),v('diameter_unit'),v('length_or_height',v('length')),v('length_unit'),v('height_wide',v('height_width')),v('height_wide_unit',v('height_unit')),v('corrosion_allowance'),v('design_code'),v('material_type',v('material')),v('material_detail',v('material_shell',v('material_head'))),v('year_built'),v('date_built'),v('year_used'),v('previous_inspection'),v('last_inspection'),v('inspection_date'),v('nominal_thickness'),v('previous_thickness'),v('actual_thickness',v('thickness_reading')),v('design_pressure'),v('mawp'),v('hydrotest_pressure'),v('operating_pressure'),v('design_temperature'),v('operating_temperature'),v('fluid_service')]);
    rowNum++;
   }
   if(display.length>1)for(const col of [0,1])merges.push({s:{r:first-1,c:col},e:{r:rowNum-2,c:col}});
