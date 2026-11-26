@@ -225,7 +225,18 @@ function renderCombined(){
    for(const field of ['equipment_name','serial_number','owner_operator','location','tag'])if(!hasValue(eq[field])&&hasValue(item.eq?.[field]))eq[field]=item.eq[field];
    for(const [field,value] of Object.entries(item.identity||{}))if(!hasValue(base[field])&&hasValue(value))base[field]=value;
   }
-  const identityFallback={equipment_tag:eq.tag||bucket.resolvedTag,equipment_name:eq.equipment_name,serial_number:eq.serial_number,owner_operator:eq.owner_operator,location:eq.location};
+  // Prefer Serial No. extracted from source documents. Older D1 identity rows may
+  // contain a copied Tag PV in serial_number; never display that as a serial number.
+  const tagKey=normalizeEquipmentTag(eq.tag||bucket.resolvedTag||base.equipment_tag||'');
+  const serialCandidates=[
+   ...documents.map(r=>recordObject(r).serial_number),
+   ...all.map(r=>recordObject(r).serial_number),
+   ...bucket.items.map(item=>item.identity?.serial_number),
+   eq.serial_number
+  ].map(v=>String(v??'').trim()).filter(v=>hasValue(v)&&normalizeEquipmentTag(v)!==tagKey);
+  const sourceSerial=serialCandidates[0]||'';
+  base.serial_number=sourceSerial;
+  const identityFallback={equipment_tag:eq.tag||bucket.resolvedTag,equipment_name:eq.equipment_name,owner_operator:eq.owner_operator,location:eq.location};
   for(const [field,value] of Object.entries(identityFallback))if(!hasValue(base[field])&&hasValue(value))base[field]=value;
   if(!hasValue(base.equipment_tag)&&hasValue(bucket.resolvedTag))base.equipment_tag=bucket.resolvedTag;
   // One Excel row per Part: Previous UT and Last UT values sit side by side.
@@ -245,7 +256,7 @@ function renderCombined(){
    const prev=newest(group.previous),last=newest(group.last);
    const prevRec=prev?recordObject(prev):{},lastRec=last?recordObject(last):{};
    const primary=last||prev;
-   const merged={...base,...prevRec,...lastRec,component:group.part||lastRec.component||prevRec.component||'',
+   const merged={...base,...prevRec,...lastRec,serial_number:sourceSerial,component:group.part||lastRec.component||prevRec.component||'',
     previous_inspection:base.previous_inspection||yearFromDate(reportDateOf(prevRec)),
     last_inspection:base.last_inspection||yearFromDate(reportDateOf(lastRec)),
     previous_thickness:prevRec.thickness_reading??prevRec.previous_thickness??'',
