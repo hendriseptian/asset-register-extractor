@@ -668,6 +668,10 @@ export default {
               output.inspection_date = output.inspection_date || output.report_date || null;
               output.report_date = null;
             }
+            // Reject the common extraction error where Item/Tag No. is copied into Serial No.
+            if (output.equipment_tag && output.serial_number && normalizeTag(output.equipment_tag) === normalizeTag(output.serial_number)) {
+              output.serial_number = null;
+            }
             output._source_location = record?._source_location ?? null;
             const confidence = Number(record?._confidence);
             output._confidence = Number.isFinite(confidence) ? Math.max(0, Math.min(1, confidence)) : 0.5;
