@@ -65,6 +65,17 @@ function exportWorkbook(){
  let equipmentNo=0,rowNum=5;const merges=[];
  for(const g of groups.values()){
   equipmentNo++;
+  // Use one authoritative Serial No. for every Part row under the same PV tag.
+  // Ignore a mistaken Serial No. that is identical to the equipment Tag.
+  const serialValues=[g.e?.serial_number,g.doc?.serial_number,...g.rows.map(x=>(x.record||{}).serial_number)]
+   .map(x=>String(x??'').trim()).filter(Boolean);
+  const tagKey=normalizeTag(g.tag||g.doc?.equipment_tag||'');
+  const serialCounts=new Map();
+  for(const value of serialValues){
+   if(normalizeTag(value)===tagKey)continue;
+   serialCounts.set(value,(serialCounts.get(value)||0)+1);
+  }
+  const canonicalSerial=[...serialCounts.entries()].sort((a,b)=>b[1]-a[1])[0]?.[0]||g.e?.serial_number||g.doc?.serial_number||'';
   const previousRows=g.rows.filter(x=>x.record_type==='previous_ut'),lastRows=g.rows.filter(x=>x.record_type==='last_ut');
   const docs=g.rows.filter(x=>!['previous_ut','last_ut'].includes(x.record_type));
   const partMap=new Map();
@@ -96,7 +107,7 @@ function exportWorkbook(){
   for(let index=0;index<display.length;index++){
    const row=display[index],r={...g.doc};for(const [field,value] of Object.entries(row.record||{}))if(value!==null&&value!==undefined&&String(value).trim()!=='')r[field]=value;
    const v=(k,fallback='')=>r[k]!==null&&r[k]!==undefined&&String(r[k]).trim()!==''?r[k]:fallback;
-   matrix.push([index===0?equipmentNo:'',index===0?(g.tag||v('equipment_tag')):'',v('component'),v('equipment_name',g.e.equipment_name),v('owner_operator',g.e.owner_operator),v('location',g.e.location),v('equipment_type'),v('serial_number',g.e.serial_number),v('manufacturer'),v('diameter_value',v('diameter')),v('diameter_unit'),v('length_or_height',v('length')),v('length_unit'),v('height_wide',v('height_width')),v('height_wide_unit',v('height_unit')),v('corrosion_allowance'),v('design_code'),v('material_type',v('material')),v('material_detail',v('material_shell',v('material_head'))),v('year_built'),v('date_built'),v('year_used'),v('previous_inspection'),v('last_inspection'),v('inspection_date'),v('nominal_thickness'),v('previous_thickness'),v('actual_thickness',v('thickness_reading')),v('design_pressure'),v('mawp'),v('hydrotest_pressure'),v('operating_pressure'),v('design_temperature'),v('operating_temperature'),v('fluid_service')]);
+   matrix.push([index===0?equipmentNo:'',index===0?(g.tag||v('equipment_tag')):'',v('component'),v('equipment_name',g.e.equipment_name),v('owner_operator',g.e.owner_operator),v('location',g.e.location),v('equipment_type'),canonicalSerial,v('manufacturer'),v('diameter_value',v('diameter')),v('diameter_unit'),v('length_or_height',v('length')),v('length_unit'),v('height_wide',v('height_width')),v('height_wide_unit',v('height_unit')),v('corrosion_allowance'),v('design_code'),v('material_type',v('material')),v('material_detail',v('material_shell',v('material_head'))),v('year_built'),v('date_built'),v('year_used'),v('previous_inspection'),v('last_inspection'),v('inspection_date'),v('nominal_thickness'),v('previous_thickness'),v('actual_thickness',v('thickness_reading')),v('design_pressure'),v('mawp'),v('hydrotest_pressure'),v('operating_pressure'),v('design_temperature'),v('operating_temperature'),v('fluid_service')]);
    rowNum++;
   }
   if(display.length>1)for(const col of [0,1])merges.push({s:{r:first-1,c:col},e:{r:rowNum-2,c:col}});
