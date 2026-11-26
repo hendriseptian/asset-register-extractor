@@ -93,13 +93,13 @@ function applyEdits(recordId,record){const edits=readEdits()[String(recordId||''
 function valueFor(key,rec,eq,base,row,index){
  if(key==='A')return index+1;
  if(key==='B')return eq.tag||base.equipment_tag||rec.equipment_tag||'';
- // Identity fields must fall back to the equipment row from D1, not only the extracted document.
- const identityFallback={component:['component','part'],equipment_name:['equipment_name'],owner_operator:['owner_operator'],location:['location'],equipment_type:['equipment_type'],serial_number:['serial_number'],manufacturer:['manufacturer','manufacture']};
- if(identityFallback[key]){
-  for(const field of identityFallback[key])if(hasValue(rec[field]))return rec[field];
-  const equipmentField=key==='component'?null:key;
-  if(equipmentField&&hasValue(eq[equipmentField]))return eq[equipmentField];
-  if(equipmentField&&hasValue(base[equipmentField]))return base[equipmentField];
+ // Resolve the column letter to its canonical data field, then fall back to D1 equipment identity.
+ const field=cols.find(column=>column[0]===key)?.[2];
+ if(field){
+  if(hasValue(rec[field]))return rec[field];
+  if(field!=='component'&&hasValue(eq[field]))return eq[field];
+  if(field!=='component'&&hasValue(base[field]))return base[field];
+  if(field==='component'&&hasValue(rec.part))return rec.part;
  }
  if(key==='J'&& !hasValue(rec.diameter)&&hasValue(rec.diameter_value))return rec.diameter_value;
  if(key==='K'&& !hasValue(rec.diameter_unit)&&hasValue(rec.diameter))return (String(rec.diameter).match(/\b(mm|cm|m|inch|in)\b/i)||[])[1]||'';
