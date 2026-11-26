@@ -80,6 +80,25 @@ function recordObject(row){
  for(const [target,names] of Object.entries(aliases))if(!hasValue(value[target])){const found=names.map(k=>value[k]).find(hasValue);if(hasValue(found))value[target]=found}
  return value;
 }
+function normalizeRegisterDate(value){
+ if(!hasValue(value))return '';
+ const s=String(value).trim();
+ let m=s.match(/^(\d{1,2})[\/.-](\d{1,2})[\/.-](\d{4})$/);
+ if(m)return String(m[1]).padStart(2,'0')+'/'+String(m[2]).padStart(2,'0')+'/'+m[3];
+ m=s.match(/^(\d{4})-(\d{2})-(\d{2})/);
+ if(m)return m[3]+'/'+m[2]+'/'+m[1];
+ m=s.match(/\b(\d{1,2})\s+([A-Za-z]{3,})\s+(\d{4})\b/);
+ if(m){const months={jan:'01',feb:'02',mar:'03',apr:'04',may:'05',jun:'06',jul:'07',aug:'08',sep:'09',oct:'10',nov:'11',dec:'12'};const mm=months[m[2].slice(0,3).toLowerCase()];if(mm)return m[1].padStart(2,'0')+'/'+mm+'/'+m[3]}
+ return s;
+}
+function yearFromDate(value){const d=normalizeRegisterDate(value);const m=d.match(/(?:^|\/)(\d{4})$/);return m?m[1]:''}
+function normalizeBuildYears(record){
+ const out={...record};const raw=String(out.year_built??'').trim();
+ if(raw.includes('/')){const parts=raw.split('/').map(x=>x.trim());if(!hasValue(out.year_used)&&/^\d{4}$/.test(parts[1]||''))out.year_used=parts[1];if(/^\d{4}$/.test(parts[0]||''))out.year_built=parts[0]}
+ if(!hasValue(out.year_used)&&/^\d{4}$/.test(String(out.date_built??'').trim()))out.year_used=String(out.date_built).trim();
+ if(!hasValue(out.date_built)&&/^\d{4}$/.test(String(out.year_built??'').trim()))out.date_built='01/01/'+out.year_built;
+ return out;
+}
 function mergedDoc(rows){const out={};for(const r of rows){for(const [k,v] of Object.entries(recordObject(r))){if(!k.startsWith('_')&&hasValue(v)&&(out[k]===undefined||!hasValue(out[k])))out[k]=v}}return out}
 function isUtMeasurement(r){const rec=recordObject(r);return ['previous_ut','last_ut'].includes(r.record_type)&&(hasValue(rec.component)||hasValue(rec.thickness_reading)||hasValue(rec.measurement_location)||hasValue(rec.measurement_point))}
 const cols=[
@@ -114,7 +133,7 @@ function valueFor(key,rec,eq,base,row,index){
  if(key==='V')return rec.year_used??'';
  if(key==='W')return rec.previous_inspection??rec.previous_inspection_year??'';
  if(key==='X')return rec.last_inspection??rec.last_inspection_year??'';
- if(key==='Y')return rec.inspection_date??'';
+ if(key==='Y')return normalizeRegisterDate(rec.inspection_date??'');
  if(key==='Z')return rec.nominal_thickness??'';
  if(key==='AA')return rec.previous_thickness??'';
  if(key==='AB')return rec.actual_thickness??(row.record_type==='previous_ut'||row.record_type==='last_ut'?rec.thickness_reading:'')??'';
@@ -145,7 +164,12 @@ function renderCombined(){
  const groups=[...buckets.values()].map(bucket=>{
   const all=bucket.items.flatMap(item=>item.all),identities=bucket.items.map(item=>({record:item.identity}));
   // Merge every non-UT extraction as identity/source data; older records may use legacy document_type values.
-  const documents=all.filter(r=>!['previous_ut','last_ut'].includes(r.record_type)),base=mergedDoc([...identities,...documents]);
+  const documents=all.filter(r=>!['previous_ut','last_ut'].includes(r.record_type)),base=normalizeBuildYears(mergedDoc([...identities,...documents]));
+  const previousReport=all.filter(r=>r.record_type==='previous_ut').map(recordObject).find(r=>hasValue(r.inspection_date)||hasValue(r.report_date))||{};
+  const lastReport=all.filter(r=>r.record_type==='last_ut').map(recordObject).find(r=>hasValue(r.inspection_date)||hasValue(r.report_date))||{};
+  base.previous_inspection=yearFromDate(previousReport.inspection_date||previousReport.report_date);
+  base.last_inspection=yearFromDate(lastReport.inspection_date||lastReport.report_date);
+  base.inspection_date=normalizeRegisterDate(lastReport.inspection_date||lastReport.report_date);
   const eq={...bucket.eq};
   for(const item of bucket.items){
    for(const field of ['equipment_name','serial_number','owner_operator','location','tag'])if(!hasValue(eq[field])&&hasValue(item.eq?.[field]))eq[field]=item.eq[field];
