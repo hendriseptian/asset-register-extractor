@@ -88,7 +88,7 @@ function exportWorkbook(){
      inspection_date:normalizeExportDate(lastRec.inspection_date||lastRec.report_date)};
     return {record_type:'combined_ut',record:combined};
    });
-  }else display=docs.length?docs.map(x=>({record_type:x.record_type,record:{...g.doc,...(x.record||{})}}):[{record_type:'document',record:g.doc}];
+  }else display=docs.length?docs.map(x=>({record_type:x.record_type,record:{...g.doc,...(x.record||{})}})):[{record_type:'document',record:g.doc}];
   const first=rowNum;
   for(let index=0;index<display.length;index++){
    const row=display[index],r={...g.doc};for(const [field,value] of Object.entries(row.record||{}))if(value!==null&&value!==undefined&&String(value).trim()!=='')r[field]=value;
