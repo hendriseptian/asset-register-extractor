@@ -18,7 +18,7 @@ export function buildPvUtPrompt(utPeriod, equipment, fileName) {
   return [
     'Extract ultrasonic thickness (UT) measurement data from the attached Pressure Vessel inspection report.',
     'Dataset type: ' + (utPeriod === 'previous' ? 'PREVIOUS UT / historical UT' : 'LAST UT / latest UT'),
-    'Equipment context: ' + JSON.stringify(equipment || {}) + ' (matching hint only; source report Equipment Tag is authoritative),
+    'Equipment context: ' + JSON.stringify(equipment || {}) + ' (matching hint only; source report Equipment Tag is authoritative)',
     'Original file name: ' + String(fileName || ''),
     'Return ONLY valid JSON: ' + JSON.stringify({ records: [row] }),
     'Rules:',
