@@ -92,9 +92,13 @@ function normalizeRegisterDate(value){
  return s;
 }
 function yearFromDate(value){const d=normalizeRegisterDate(value);const m=d.match(/(?:^|\/)(\d{4})$/);return m?m[1]:''}
-function normalizeBuildYears(record){
- const out={...record};const raw=String(out.year_built??'').trim();
- if(raw.includes('/')){const parts=raw.split('/').map(x=>x.trim());if(!hasValue(out.year_used)&&/^\d{4}$/.test(parts[1]||''))out.year_used=parts[1];if(/^\d{4}$/.test(parts[0]||''))out.year_built=parts[0]}
+function normalizeBuildYears(record,sourceRecords=[]){
+ const out={...record};
+ const candidates=sourceRecords.map(recordObject).concat([out]);
+ const pair=candidates.map(r=>String(r.year_built??r.built_used??r.year_built_used??'').trim()).find(v=>/^\d{4}\s*\/\s*\d{4}$/.test(v));
+ if(pair){const parts=pair.split('/').map(v=>v.trim());out.year_built=parts[0];out.year_used=parts[1]}
+ const built=String(out.year_built??'').trim();
+ if(/^\d{4}\s*\/\s*\d{4}$/.test(built)){const parts=built.split('/').map(v=>v.trim());out.year_built=parts[0];if(!hasValue(out.year_used))out.year_used=parts[1]}
  if(!hasValue(out.year_used)&&/^\d{4}$/.test(String(out.date_built??'').trim()))out.year_used=String(out.date_built).trim();
  if(!hasValue(out.date_built)&&/^\d{4}$/.test(String(out.year_built??'').trim()))out.date_built='01/01/'+out.year_built;
  return out;
@@ -135,8 +139,8 @@ function valueFor(key,rec,eq,base,row,index){
  if(key==='X')return rec.last_inspection??rec.last_inspection_year??'';
  if(key==='Y')return normalizeRegisterDate(rec.inspection_date??'');
  if(key==='Z')return rec.nominal_thickness??'';
- if(key==='AA')return row.record_type==='previous_ut'?(rec.thickness_reading??rec.previous_thickness??''):(rec.previous_thickness??'');
- if(key==='AB')return row.record_type==='last_ut'?(rec.thickness_reading??rec.actual_thickness??''):(rec.actual_thickness??'');
+ if(key==='AA')return rec.previous_thickness??(row.record_type==='previous_ut'?rec.thickness_reading:'')??'';
+ if(key==='AB')return rec.actual_thickness??(row.record_type==='last_ut'?rec.thickness_reading:'')??'';
  if(key==='AC')return rec.design_pressure??'';
  if(key==='AD')return rec.mawp??'';
  if(key==='AE')return rec.hydrotest_pressure??'';
@@ -164,9 +168,13 @@ function renderCombined(){
  const groups=[...buckets.values()].map(bucket=>{
   const all=bucket.items.flatMap(item=>item.all),identities=bucket.items.map(item=>({record:item.identity}));
   // Merge every non-UT extraction as identity/source data; older records may use legacy document_type values.
-  const documents=all.filter(r=>!['previous_ut','last_ut'].includes(r.record_type)),base=normalizeBuildYears(mergedDoc([...identities,...documents]));
-  const previousReport=all.filter(r=>r.record_type==='previous_ut').map(recordObject).find(r=>hasValue(r.inspection_date)||hasValue(r.report_date))||{};
-  const lastReport=all.filter(r=>r.record_type==='last_ut').map(recordObject).find(r=>hasValue(r.inspection_date)||hasValue(r.report_date))||{};
+  const documents=all.filter(r=>!['previous_ut','last_ut'].includes(r.record_type));
+  const sourceRecords=[...identities,...documents];
+  const base=normalizeBuildYears(mergedDoc(sourceRecords),sourceRecords);
+  const latestUt=(type)=>all.filter(r=>r.record_type===type).slice().sort((a,b)=>String(b.created_at||b.document_created_at||'').localeCompare(String(a.created_at||a.document_created_at||''))).map(r=>({...r,record:recordObject(r)}));
+  const previousReports=latestUt('previous_ut'),lastReports=latestUt('last_ut');
+  const previousReport=previousReports.map(r=>r.record).find(r=>hasValue(r.inspection_date)||hasValue(r.report_date))||{};
+  const lastReport=lastReports.map(r=>r.record).find(r=>hasValue(r.inspection_date)||hasValue(r.report_date))||{};
   base.previous_inspection=yearFromDate(previousReport.inspection_date||previousReport.report_date);
   base.last_inspection=yearFromDate(lastReport.inspection_date||lastReport.report_date);
   base.inspection_date=normalizeRegisterDate(lastReport.inspection_date||lastReport.report_date);
@@ -178,7 +186,29 @@ function renderCombined(){
   const identityFallback={equipment_tag:eq.tag||bucket.resolvedTag,equipment_name:eq.equipment_name,serial_number:eq.serial_number,owner_operator:eq.owner_operator,location:eq.location};
   for(const [field,value] of Object.entries(identityFallback))if(!hasValue(base[field])&&hasValue(value))base[field]=value;
   if(!hasValue(base.equipment_tag)&&hasValue(bucket.resolvedTag))base.equipment_tag=bucket.resolvedTag;
-  const ut=all.filter(isUtMeasurement),rows=ut.length?ut:(documents.length?documents:[{record_id:'',record_type:'document',record:base}]);
+  // One Excel row per Part: Previous UT and Last UT values sit side by side.
+  const ut=all.filter(isUtMeasurement);
+  const partGroups=new Map();
+  for(const source of ut){
+   const sourceRecord=recordObject(source);
+   const part=String(sourceRecord.component||sourceRecord.part||sourceRecord.identification||'').trim();
+   const key=part.toLowerCase().replace(/[^a-z0-9]/g,'')||('record:'+source.record_id);
+   if(!partGroups.has(key))partGroups.set(key,{part,previous:[],last:[]});
+   const group=partGroups.get(key);
+   if(source.record_type==='previous_ut')group.previous.push(source);
+   else if(source.record_type==='last_ut')group.last.push(source);
+  }
+  const newest=list=>list.slice().sort((a,b)=>String(b.created_at||b.document_created_at||'').localeCompare(String(a.created_at||a.document_created_at||'')))[0];
+  const rows=ut.length?[...partGroups.values()].map(group=>{
+   const prev=newest(group.previous),last=newest(group.last);
+   const prevRec=prev?recordObject(prev):{},lastRec=last?recordObject(last):{};
+   const primary=last||prev;
+   const merged={...base,...prevRec,...lastRec,component:group.part||lastRec.component||prevRec.component||'',
+    previous_thickness:prevRec.thickness_reading??prevRec.previous_thickness??'',
+    actual_thickness:lastRec.thickness_reading??lastRec.actual_thickness??'',
+    inspection_date:lastRec.inspection_date||lastRec.report_date||prevRec.inspection_date||prevRec.report_date||''};
+   return {...primary,record_id:primary?.record_id||'',record_type:'combined_ut',record:merged,_source_record_ids:[prev?.record_id,last?.record_id].filter(Boolean)};
+  }):(documents.length?documents:[{record_id:'',record_type:'document',record:base}]);
   return {eq,all,base,rows,resolvedTag:bucket.resolvedTag};
  }).filter(g=>g.rows.length);
  if(!groups.length){$('records').innerHTML='<div class="rv-empty">No PV records found. Scan a Datasheet or UT report first.</div>';return}
@@ -194,8 +224,9 @@ function renderCombined(){
    return '<td><input data-edit-field="'+letter+'" data-record-id="'+esc(row.record_id||'')+'" value="'+esc(value)+'" aria-label="'+esc(letter+' '+label)+'"></td>';
   }).join('');
   const tag=i===0?'<td class="rv-tag-merge" rowspan="'+rows.length+'">'+esc(resolvedTag||base.equipment_tag||'—')+'</td>':'';
-  const actions=row.record_id?'<button class="btn secondary" data-delete>Delete</button>':'<span class="rv-status">Datasheet only</span>';
-  return '<tr data-record="'+esc(row.record_id||'')+'"><td>'+n+'</td>'+tag+cells+'<td class="rv-action">'+actions+'</td></tr>';
+  const sourceIds=Array.isArray(row._source_record_ids)?row._source_record_ids:(row.record_id?[row.record_id]:[]);
+  const actions=sourceIds.length?'<button class="btn secondary" data-delete>Delete</button>':'<span class="rv-status">Datasheet only</span>';
+  return '<tr data-record="'+esc(row.record_id||'')+'" data-record-ids="'+esc(JSON.stringify(sourceIds))+'"><td>'+n+'</td>'+tag+cells+'<td class="rv-action">'+actions+'</td></tr>';
  }).join('')).join('');
  const letters='<tr class="rv-col-letters">'+cols.map(([letter])=>'<th>'+letter+'</th>').join('')+'<th></th></tr>';
  const mainHeaders=headerGroups.map(([letter,label,span])=>'<th '+(span>1?'colspan="'+span+'"':'rowspan="2"')+'>'+esc(label)+'</th>').join('');
@@ -218,7 +249,7 @@ $('records').addEventListener('click',async event=>{
   try{const result=await api('/api/pv/equipment/link-records',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({source_equipment_id:sourceId,target_tag:target.tag})});$('notice').textContent='Linked '+result.moved_records+' UT rows and '+result.moved_documents+' scan documents to '+target.tag+'.';await load()}
   catch(e){$('notice').textContent='Link failed: '+e.message;linkBtn.disabled=false}
   return;
- }const del=event.target.closest('[data-delete]');if(!del)return;const tr=del.closest('tr[data-record]');if(!tr)return;const row=records.find(x=>String(x.record_id)===String(tr.dataset.record));if(!row)return;if(!confirm('Delete this extracted row?'))return;del.disabled=true;try{await api('/api/pv/records/'+encodeURIComponent(row.record_id),{method:'DELETE'});$('notice').textContent='Row deleted.';await load()}catch(e){$('notice').textContent='Delete failed: '+e.message;del.disabled=false}});
+ }const del=event.target.closest('[data-delete]');if(!del)return;const tr=del.closest('tr[data-record]');if(!tr)return;let ids=[];try{ids=JSON.parse(tr.dataset.recordIds||'[]')}catch{}if(!ids.length&&tr.dataset.record)ids=[tr.dataset.record];if(!ids.length)return;if(!confirm('Delete this combined Part row and its linked Previous/Last UT records?'))return;del.disabled=true;try{for(const id of ids)await api('/api/pv/records/'+encodeURIComponent(id),{method:'DELETE'});$('notice').textContent='Deleted '+ids.length+' linked UT record(s).';await load()}catch(e){$('notice').textContent='Delete failed: '+e.message;del.disabled=false}});
 document.querySelectorAll('[data-tab]').forEach(b=>b.addEventListener('click',()=>{tab=b.dataset.tab;render()}));$('reload').addEventListener('click',event=>{event.preventDefault();load()});$('delete-all').addEventListener('click',async()=>{if(!confirm('Delete ALL PV data? This removes PV equipment, extracted records, documents and pending scans. PSV/BV data are not affected.'))return;const btn=$('delete-all');btn.disabled=true;try{const x=await api('/api/pv/records',{method:'DELETE'});$('notice').textContent='Deleted '+x.deleted_records+' records, '+x.deleted_documents+' documents, '+x.deleted_equipment+' equipment and '+x.deleted_pending+' pending scans.';await load()}catch(e){$('notice').textContent='Delete all failed: '+e.message}finally{btn.disabled=false}});load();
 })();
 </script></body></html>
