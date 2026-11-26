@@ -516,6 +516,16 @@ export default {
           return json(request, { ok: true, equipment, records, count: records.length });
         }
 
+        if (url.pathname.startsWith('/api/pv/records/') && request.method === 'DELETE') {
+          const recordId = decodeURIComponent(url.pathname.slice('/api/pv/records/'.length));
+          if (!recordId) return json(request, { error: 'record_id is required.' }, 400);
+          const existing = await env.DB.prepare('SELECT document_id FROM pv_extracted_records WHERE id = ?').bind(recordId).first();
+          if (!existing) return json(request, { error: 'PV extracted record not found.' }, 404);
+          await env.DB.prepare('DELETE FROM pv_extracted_records WHERE id = ?').bind(recordId).run();
+          await env.DB.prepare('DELETE FROM pv_documents WHERE id = ? AND NOT EXISTS (SELECT 1 FROM pv_extracted_records WHERE document_id = ?)').bind(existing.document_id, existing.document_id).run();
+          return json(request, { ok: true, deleted_record_id: recordId });
+        }
+
         if (url.pathname.startsWith('/api/pv/records/') && request.method === 'PUT') {
           const recordId = decodeURIComponent(url.pathname.slice('/api/pv/records/'.length));
           const body = await request.json();
