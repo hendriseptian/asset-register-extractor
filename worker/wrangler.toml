@@ -2,6 +2,9 @@ name = "asset-register-extractor"
 main = "src/index.js"
 compatibility_date = "2026-11-17"
 
+# IMPORTANT: this UUID belongs only to the source repository's Cloudflare account.
+# Fork users must deploy through Actions > MECHASSET - Automatic Cloudflare Setup.
+# The installer generates a temporary Wrangler config with their own D1 UUID.
 [[d1_databases]]
 binding = "DB"
 database_name = "mechasset-db"
