@@ -59,8 +59,13 @@ console.log(`Cloudflare account: ${accountId}`);
 console.log(`Worker: ${workerName}`);
 console.log(`D1 database: ${databaseName}`);
 
-const list = await cloudflare(`/accounts/${accountId}/d1/database?per_page=100`);
-const existing = (list.result || []).find(database => database.name === databaseName);
+let existing = null;
+for (let page = 1; page <= 20 && !existing; page++) {
+  const list = await cloudflare(`/accounts/${accountId}/d1/database?page=${page}&per_page=100`);
+  const databases = list.result || [];
+  existing = databases.find(database => database.name === databaseName) || null;
+  if (databases.length < 100) break;
+}
 let databaseId = existing?.uuid;
 
 if (databaseId) {
