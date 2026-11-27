@@ -245,8 +245,10 @@
         const skippedDuplicates = [];
         for (const file of selectedFiles) {
           const hash = await hashFile(file);
-          const legacyMatch = knownEntries.some((entry) => !entry.hash && entry.name === file.name && Number(entry.size) === file.size);
-          if (knownHashes.has(hash) || legacyMatch || seenHashes.has(hash)) {
+          // Compare file content hashes only. The same filename (and even the same
+          // file size) may contain a different PSV/BV certificate and must be processed.
+          // Legacy entries without a hash are not safe grounds for rejecting a file.
+          if (knownHashes.has(hash) || seenHashes.has(hash)) {
             skippedDuplicates.push(file.name);
             continue;
           }
