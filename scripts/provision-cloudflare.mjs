@@ -98,7 +98,14 @@ try {
   console.log("Deploying MECHASSET Worker...");
   runWrangler(["deploy"]);
   console.log("MECHASSET backend provisioning completed.");
-  console.log(`Worker URL: https://${workerName}.${process.env.CLOUDFLARE_WORKERS_DEV_SUBDOMAIN || "YOUR-SUBDOMAIN"}.workers.dev`);
+  try {
+    const subdomainResponse = await cloudflare(`/accounts/${accountId}/workers/subdomain`);
+    const subdomain = subdomainResponse.result?.subdomain;
+    if (subdomain) console.log(`Worker URL: https://${workerName}.${subdomain}.workers.dev`);
+    else console.log("Worker deployed. Find its workers.dev URL in Cloudflare > Workers & Pages.");
+  } catch {
+    console.log("Worker deployed. Find its workers.dev URL in Cloudflare > Workers & Pages.");
+  }
 } finally {
   await rm(generatedConfig, { force: true });
 }
