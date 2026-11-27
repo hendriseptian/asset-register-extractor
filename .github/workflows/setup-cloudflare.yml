@@ -48,7 +48,7 @@ jobs:
           [[ -n "$CLOUDFLARE_ACCOUNT_ID" ]] || missing+=("CLOUDFLARE_ACCOUNT_ID")
           [[ -n "$GEMINI_API_KEY" ]] || missing+=("GEMINI_API_KEY")
           if (( ${#missing[@]} )); then
-            printf 'Missing required repository secrets: %s\\n' "${missing[*]}"
+            printf 'Missing required repository secrets: %s\n' "${missing[*]}"
             echo "Open Settings > Secrets and variables > Actions and create each secret. Secret values are never printed."
             exit 1
           fi
