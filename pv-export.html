@@ -45,6 +45,24 @@ function exportYear(value){
  // Last-resort: accept an unambiguous four-digit year within a longer date label.
  m=s.match(/\b(19\d{2}|20\d{2})\b/);return m?m[1]:'';
 }
+function inspectionYearFromRecord(record){
+ const r=record||{};
+ const direct=r.previous_inspection??r.previous_inspection_year??r.inspection_year??r.report_year;
+ if(direct!==null&&direct!==undefined&&String(direct).trim()!==''){
+  const y=exportYear(direct);if(y)return y;
+ }
+ for(const key of ['inspection_date','inspectionDate','date_of_inspection','date_inspected','report_date','reportDate','date_of_report','reporting_date','inspection_period','report_period','date']){
+  const value=r[key];if(value!==null&&value!==undefined&&String(value).trim()!==''){
+   const y=exportYear(value);if(y)return y;
+  }
+ }
+ return '';
+}
+function latestInspectionYear(rows){
+ const ordered=(rows||[]).slice().sort((a,b)=>String(b.created_at||b.document_created_at||'').localeCompare(String(a.created_at||a.document_created_at||'')));
+ for(const row of ordered){const year=inspectionYearFromRecord(row.record||{});if(year)return year;}
+ return '';
+}
 function normalizeExportIdentity(record){
  const r={...record},raw=String(r.year_built??'').trim();
  if(raw.includes('/')){const p=raw.split('/').map(x=>x.trim());if(!r.year_used&&/^\d{4}$/.test(p[1]||''))r.year_used=p[1];if(/^\d{4}$/.test(p[0]||''))r.year_built=p[0]}
@@ -113,8 +131,8 @@ function exportWorkbook(){
     const combined={...g.doc,...partDoc,...prevRec,...lastRec,component:part.part||'',
      previous_thickness:prevRec.thickness_reading??prevRec.previous_thickness??'',
      actual_thickness:lastRec.thickness_reading??lastRec.actual_thickness??'',
-     previous_inspection:exportYear(prevRec.inspection_date||prevRec.report_date),
-     last_inspection:exportYear(lastRec.inspection_date||lastRec.report_date),
+     previous_inspection:inspectionYearFromRecord(prevRec)||latestInspectionYear(part.previous)||latestInspectionYear(previousRows)||exportYear(g.doc.previous_inspection||g.doc.previous_inspection_year),
+     last_inspection:inspectionYearFromRecord(lastRec)||latestInspectionYear(part.last)||latestInspectionYear(lastRows)||exportYear(g.doc.last_inspection||g.doc.last_inspection_year),
      inspection_date:normalizeExportDate(lastRec.inspection_date||lastRec.report_date),
      _all_source_records:part.sources.map(source=>({record_id:source.record_id||null,document_id:source.document_id||null,file_name:source.file_name||'',document_type:source.document_type||'',record_type:source.record_type||'',review_status:source.review_status||'',created_at:source.created_at||source.document_created_at||'',record:source.record||{}}))};
     return {record_type:'combined_ut',record:combined};
