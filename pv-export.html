@@ -63,6 +63,41 @@ function latestInspectionYear(rows){
  for(const row of ordered){const year=inspectionYearFromRecord(row.record||{});if(year)return year;}
  return '';
 }
+function normalizeDimension(value,unit){
+ const raw=String(value??'').trim();
+ let u=String(unit??'').trim();
+ if(!raw)return {value:'',unit:u};
+ // Extract a unit attached to or following the numeric dimension, while
+ // preserving engineering qualifiers such as (OD), (S/S), and (T/T).
+ const match=raw.match(/^(.*?)(?:\\s*)(mm|millimeters?|cm|centimeters?|m|meters?|inches|inch|in)\\s*(.*)$/i);
+ let val=raw;
+ if(match){
+  val=(match[1]+' '+match[3]).trim().replace(/\\s{2,}/g,' ');
+  if(!u)u=match[2].toLowerCase();
+ }
+ // All three PV dimension fields in this register are metric; when the
+ // source gives a bare dimension, standardize its unit to mm.
+ if(!u)u='mm';
+ const aliases={millimeter:'mm',millimeters:'mm',centimeter:'cm',centimeters:'cm',meter:'m',meters:'m',inch:'in',inches:'in'};
+ u=aliases[u.toLowerCase()]||u;
+ return {value:val,unit:u};
+}
+function normalizeExportDimensions(record){
+ const r={...record};
+ for(const [valueKey,unitKey,fallbackKeys] of [
+  ['diameter_value','diameter_unit',['diameter']],
+  ['length_or_height','length_unit',['length','length_value']],
+  ['height_wide','height_wide_unit',['height_width','height_value']]
+ ]){
+  let value=r[valueKey];
+  if(value===undefined||value===null||String(value).trim()===''){
+   for(const key of fallbackKeys){if(r[key]!==undefined&&r[key]!==null&&String(r[key]).trim()!==''){value=r[key];break}}
+  }
+  const normalized=normalizeDimension(value,r[unitKey]);
+  if(String(value??'').trim()!==''){r[valueKey]=normalized.value;r[unitKey]=normalized.unit}
+ }
+ return r;
+}
 function normalizeExportIdentity(record){
  const r={...record},raw=String(r.year_built??'').trim();
  if(raw.includes('/')){const p=raw.split('/').map(x=>x.trim());if(!r.year_used&&/^\d{4}$/.test(p[1]||''))r.year_used=p[1];if(/^\d{4}$/.test(p[0]||''))r.year_built=p[0]}
@@ -142,6 +177,8 @@ function exportWorkbook(){
   for(let index=0;index<display.length;index++){
    const row=display[index],r={...g.doc};for(const [field,value] of Object.entries(row.record||{}))if(value!==null&&value!==undefined&&String(value).trim()!=='')r[field]=value;
    const v=(k,fallback='')=>r[k]!==null&&r[k]!==undefined&&String(r[k]).trim()!==''?r[k]:fallback;
+   const dimensions=normalizeExportDimensions(r);
+   for(const key of ['diameter_value','diameter_unit','length_or_height','length_unit','height_wide','height_wide_unit'])if(dimensions[key]!==undefined)r[key]=dimensions[key];
    const jointRadiography=normalizeJointRadiography(r);
    matrix.push([index===0?equipmentNo:'',index===0?(g.tag||v('equipment_tag')):'',v('component'),v('equipment_name',g.e.equipment_name),v('owner_operator',g.e.owner_operator),v('location',g.e.location),v('equipment_type'),canonicalSerial,v('manufacturer'),v('diameter_value',v('diameter')),v('diameter_unit'),v('length_or_height',v('length')),v('length_unit'),v('height_wide',v('height_width')),v('height_wide_unit',v('height_unit')),v('corrosion_allowance'),jointRadiography.joint_efficiency,jointRadiography.radiography,v('design_code'),v('material_type',v('material')),v('material_detail',v('material_shell',v('material_head'))),v('year_built'),v('date_built'),v('year_used'),v('previous_inspection'),v('last_inspection'),v('inspection_date'),v('nominal_thickness'),v('previous_thickness'),v('actual_thickness',v('thickness_reading')),v('design_pressure'),v('mawp'),v('hydrotest_pressure'),v('operating_pressure'),v('design_temperature'),v('operating_temperature'),v('fluid_service'),JSON.stringify(row.record?._all_source_records||[])]);
    rowNum++;
