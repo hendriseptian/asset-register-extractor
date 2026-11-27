@@ -5,7 +5,7 @@ compatibility_date = "2026-11-17"
 [[d1_databases]]
 binding = "DB"
 database_name = "mechasset-db"
-database_id = "e21ec79c-948d-49c9-bd2e-321fbff41214"
+database_id = "c06404ff-9984-4d04-8108-895f5ac7b64a"
 
 [vars]
 GEMINI_MODEL = "gemini-3.5-flash-lite"
