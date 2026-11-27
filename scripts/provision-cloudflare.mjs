@@ -57,7 +57,7 @@ function runWrangler(args, input) {
   if (result.error) throw result.error;
   if (result.status !== 0) {
     const detail = (result.stderr || result.stdout || "").trim().split("\n").slice(-12).join("\n");
-    throw new Error(`Wrangler command failed (exit ${result.status}): wrangler ${args.join(" ")}\\n${detail}`);
+    throw new Error(`Wrangler command failed (exit ${result.status}): wrangler ${args.join(" ")}\n${detail}`);
   }
 }
 
@@ -97,6 +97,8 @@ if (databaseId) {
 const config = `name = "${workerName}"
 main = "src/index.js"
 compatibility_date = "2026-11-17"
+workers_dev = true
+migrations_dir = "migrations"
 
 [[d1_databases]]
 binding = "DB"
