@@ -8,9 +8,9 @@ on:
         required: true
         default: "mechasset-db"
       worker_name:
-        description: "Cloudflare Worker name (must be unique in your account)"
-        required: true
-        default: "mechasset"
+        description: "Optional Worker name; defaults to mechasset-<GitHub username>"
+        required: false
+        default: ""
 
 permissions:
   contents: read
