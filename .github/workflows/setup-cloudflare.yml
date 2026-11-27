@@ -36,6 +36,24 @@ jobs:
       - name: Validate installer script
         run: node --check scripts/provision-cloudflare.mjs
 
+      - name: Validate required secrets
+        shell: bash
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+        run: |
+          missing=()
+          [[ -n "$CLOUDFLARE_API_TOKEN" ]] || missing+=("CLOUDFLARE_API_TOKEN")
+          [[ -n "$CLOUDFLARE_ACCOUNT_ID" ]] || missing+=("CLOUDFLARE_ACCOUNT_ID")
+          [[ -n "$GEMINI_API_KEY" ]] || missing+=("GEMINI_API_KEY")
+          if (( ${#missing[@]} )); then
+            printf 'Missing required repository secrets: %s\\n' "${missing[*]}"
+            echo "Open Settings > Secrets and variables > Actions and create each secret. Secret values are never printed."
+            exit 1
+          fi
+          echo "All required secrets are present."
+
       - name: Provision Cloudflare resources and deploy
         env:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
