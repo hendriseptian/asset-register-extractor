@@ -11,12 +11,16 @@ const accountId = process.env.CLOUDFLARE_ACCOUNT_ID?.trim();
 const apiToken = process.env.CLOUDFLARE_API_TOKEN?.trim();
 const geminiKey = process.env.GEMINI_API_KEY?.trim();
 const repoOwner = (process.env.GITHUB_REPOSITORY_OWNER || "mechasset-user").toLowerCase();
-const workerName = (process.env.MECHASSET_WORKER_NAME || `mechasset-${repoOwner}`)
+const requestedWorkerName = process.env.MECHASSET_WORKER_NAME?.trim();
+const workerName = (requestedWorkerName || `mechasset-${repoOwner}`)
   .toLowerCase().replace(/[^a-z0-9-]/g, "-").replace(/-+/g, "-").replace(/^-|-$/g, "").slice(0, 55);
 const databaseName = (process.env.MECHASSET_D1_NAME || "mechasset-db").trim();
 
 if (!accountId || !apiToken || !geminiKey) {
   throw new Error("Required GitHub Actions secrets are missing: CLOUDFLARE_ACCOUNT_ID, CLOUDFLARE_API_TOKEN, GEMINI_API_KEY.");
+}
+if (!/^[a-f0-9]{32}$/i.test(accountId)) {
+  throw new Error("CLOUDFLARE_ACCOUNT_ID must be the 32-character Account ID from your Cloudflare dashboard, not a D1 database ID.");
 }
 if (!/^[a-zA-Z0-9_-]{1,63}$/.test(databaseName)) {
   throw new Error("MECHASSET_D1_NAME must be 1-63 characters and contain only letters, numbers, underscores, or hyphens.");
