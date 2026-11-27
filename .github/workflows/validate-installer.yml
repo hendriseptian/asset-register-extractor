@@ -1,0 +1,42 @@
+name: Validate MECHASSET installer
+
+on:
+  push:
+    branches: ["main"]
+    paths:
+      - "scripts/provision-cloudflare.mjs"
+      - ".github/workflows/setup-cloudflare.yml"
+      - ".github/workflows/validate-installer.yml"
+      - "worker/migrations/**"
+  pull_request:
+    paths:
+      - "scripts/provision-cloudflare.mjs"
+      - ".github/workflows/setup-cloudflare.yml"
+      - ".github/workflows/validate-installer.yml"
+      - "worker/migrations/**"
+
+permissions:
+  contents: read
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+
+      - name: Check installer JavaScript syntax
+        run: node --check scripts/provision-cloudflare.mjs
+
+      - name: Verify required migrations exist
+        shell: bash
+        run: |
+          test -s worker/migrations/0001_initial_schema.sql
+          test -s worker/migrations/0002_pv_persistence.sql
+          test -s worker/migrations/0003_pv_intake_staging.sql
+          echo "All PSV/BVV/PV migration files are present."
