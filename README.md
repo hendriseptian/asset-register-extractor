@@ -52,7 +52,7 @@ The Worker uses a defensive JSON response pipeline for both PSV and BVV/PVV extr
 
 This reduces avoidable failures caused by malformed model output, but cannot guarantee success for every file. Gemini quota limits, service outages, safety blocks, unsupported/poor-quality scans, oversized documents, and output truncation can still require a manual retry or splitting the source PDF. Always review extracted values against the original document.
 
-**Deployment note:** changes under `worker/` must be deployed to Cloudflare Workers separately from GitHub Pages. After updating this repository, deploy from the `worker` directory using Wrangler (or the connected Cloudflare Worker build pipeline).
+**Deployment note:** GitHub Pages publishes the frontend; Cloudflare Worker is deployed separately. For a new Fork, use **Actions → MECHASSET - Automatic Cloudflare Setup** after adding your own Cloudflare and Gemini credentials as repository secrets. Do not connect this repository to Cloudflare Workers Builds or run `npx wrangler deploy` from Cloudflare Builds: the checked-in `worker/wrangler.toml` contains the source repository's D1 binding. The installer creates a temporary Wrangler configuration with the D1 ID belonging to the Fork owner's Cloudflare account. This keeps each installation isolated.
 
 ## Multi-document consolidation
 
