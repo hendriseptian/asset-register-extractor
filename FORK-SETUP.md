@@ -1,207 +1,178 @@
-# MECHASSET — Fork & Setup Guide
+# MECHASSET — Fork & Automatic Setup Guide
 
-This guide installs a separate MECHASSET workspace for your own GitHub and Cloudflare accounts. Your D1 database, Gemini API key, and Worker are yours; they are not shared with the original repository owner.
+Panduan ini menyiapkan instalasi MECHASSET yang terpisah untuk setiap pengguna. Repository, GitHub Pages, Cloudflare Worker, D1 Database, dan Gemini API Key akan menjadi milik akun masing-masing.
 
-## What you need
+> **Penting:** jangan menggunakan Database ID atau Gemini API Key milik pemilik repository. Installer membuat/menggunakan database di akun Cloudflare Anda sendiri.
 
-1. A GitHub account.
-2. A Cloudflare account.
-3. A Gemini API key from Google AI Studio.
-4. A Windows PC with Git and Node.js LTS installed.
-   - Git: https://git-scm.com/downloads
-   - Node.js LTS: https://nodejs.org/
-5. PowerShell (included with Windows).
+## 1. Persiapan akun
 
-> Keep your Gemini API key private. Do not put it in a frontend file, GitHub commit, README, or screenshot.
+Siapkan:
+- Akun GitHub: https://github.com/signup
+- Akun Cloudflare: https://dash.cloudflare.com/sign-up
+- Akun Google untuk Gemini API: https://aistudio.google.com/apikey
 
-## Part 1 — Fork the repository
+## 2. Fork repository MECHASSET
 
-1. Sign in to GitHub.
-2. Open https://github.com/hendriseptian/asset-register-extractor
-3. Click **Fork**.
-4. Choose your own GitHub account as the owner.
-5. Keep the repository name `asset-register-extractor` (recommended).
-6. Click **Create fork**.
-7. Open your fork and confirm that its address is similar to:
-   `https://github.com/YOUR-USERNAME/asset-register-extractor`.
+1. Login ke GitHub.
+2. Buka https://github.com/hendriseptian/asset-register-extractor
+3. Klik **Fork**.
+4. Pada bagian Owner, pilih akun GitHub Anda.
+5. Pertahankan nama repository `asset-register-extractor` (disarankan).
+6. Klik **Create fork**.
+7. Pastikan alamat repository menjadi `https://github.com/USERNAME-ANDA/asset-register-extractor`.
 
-A Fork is your own copy of the repository. Changes you make to your fork do not directly change the original repository.
+Fork adalah salinan repository di akun Anda. Perubahan di Fork tidak langsung mengubah repository sumber.
 
-## Part 2 — Download your fork to Windows
+## 3. Buat Cloudflare API Token
 
-1. Open your fork on GitHub.
-2. Click the green **Code** button.
-3. Select **HTTPS** and copy the repository URL.
-4. Open PowerShell.
-5. Run the following command, replacing the URL with your own fork URL:
+Token ini memberi GitHub Actions izin membuat D1 dan deploy Worker di akun Cloudflare Anda.
 
-```powershell
-git clone https://github.com/YOUR-USERNAME/asset-register-extractor.git
-cd asset-register-extractor
-```
+1. Login ke https://dash.cloudflare.com/profile/api-tokens
+2. Pilih **Create Token**.
+3. Pilih **Create Custom Token**.
+4. Beri nama, misalnya `MECHASSET GitHub Actions`.
+5. Tambahkan permission berikut:
+   - **Account — D1 — Edit**
+   - **Account — Workers Scripts — Edit**
+   - **Account — Account Settings — Read** (untuk membaca subdomain Worker saat menampilkan URL).
+6. Pada **Account Resources**, batasi token ke akun Cloudflare Anda saja.
+7. Buat token, lalu salin token yang ditampilkan. Token biasanya hanya ditampilkan sekali.
 
-Do not clone the original `hendriseptian` repository if you intend to deploy your own independent workspace.
+Jangan membagikan token ini dan jangan menaruhnya di source code.
 
-## Part 3 — Create your Gemini API key
+## 4. Ambil Cloudflare Account ID
 
-1. Open https://aistudio.google.com/apikey
-2. Sign in to your Google account.
-3. Create an API key.
-4. Copy the key and keep it private. You will paste it into the setup script when prompted.
-5. Do not save it in any file inside the repository.
+1. Buka Cloudflare Dashboard.
+2. Pilih akun yang akan digunakan.
+3. Di halaman Overview, cari **Account ID** pada bagian API.
+4. Salin Account ID tersebut. Ini bukan D1 Database ID.
 
-Gemini usage limits, billing, and availability are controlled by Google and your own account.
+## 5. Buat Gemini API Key
 
-## Part 4 — Run the automatic Cloudflare setup
+1. Buka https://aistudio.google.com/apikey
+2. Login dengan akun Google.
+3. Buat API key.
+4. Salin dan simpan secara privat.
 
-The repository includes `setup-mechasset.ps1`. It automates the first-time backend setup.
+Gemini API Key akan disimpan sebagai Cloudflare Worker Secret oleh installer. Jangan memasukkannya ke file HTML, JavaScript frontend, atau commit GitHub.
 
-1. In PowerShell, make sure the current directory is the cloned repository folder.
-2. Run:
+## 6. Simpan tiga GitHub Actions Secrets
 
-```powershell
-powershell -ExecutionPolicy Bypass -File .\setup-mechasset.ps1
-```
+Buka Fork Anda di GitHub:
 
-3. Enter a D1 database name when prompted, or press Enter to use `mechasset-db`.
-4. Enter a Worker name when prompted, or press Enter to use `asset-register-extractor`.
-5. A browser window opens for Cloudflare login. Sign in to the Cloudflare account where you want the application to run and authorize Wrangler.
-6. The script creates a new D1 database in that Cloudflare account.
-7. The script writes that database's ID into your local `worker/wrangler.toml`.
-8. The script applies every SQL migration in `worker/migrations` to the new remote database. This includes the schema needed by the supported PSV, BVV, and PV workflows.
-9. When Wrangler asks for `GEMINI_API_KEY`, paste the key you created in Part 3.
-10. The script deploys your Worker and prints its `workers.dev` URL.
+1. Pilih **Settings**.
+2. Pada sidebar, buka **Secrets and variables → Actions**.
+3. Klik **New repository secret**.
+4. Buat tiga secret berikut satu per satu:
 
-The setup script does not intentionally change the original GitHub repository. The D1 ID written to `worker/wrangler.toml` is local to your cloned copy unless you explicitly commit and push it.
-
-### If the script says a database with that name already exists
-
-The script is designed for a fresh setup and creates a new D1 database. If you already created one manually, do not repeatedly rerun the full script. Either choose a different database name for a fresh install, or follow the manual recovery steps below and use the ID of the existing database.
-
-### Manual recovery if automatic D1 ID detection fails
-
-If the script reports that it could not read the new database ID:
-
-1. Open Cloudflare Dashboard → **Workers & Pages** → **D1 SQL Database**.
-2. Open the database you just created and copy its **Database ID**.
-3. Open `worker/wrangler.toml` in your local repository.
-4. Set `database_name` to the exact database name and `database_id` to the copied ID.
-5. Open PowerShell in the repository root and run:
-
-```powershell
-cd worker
-npx wrangler d1 migrations apply YOUR_DATABASE_NAME --remote
-npx wrangler secret put GEMINI_API_KEY
-npx wrangler deploy
-cd ..
-```
-
-Replace `YOUR_DATABASE_NAME` with the exact name of your D1 database.
-
-## Part 5 — Publish your frontend with GitHub Pages
-
-1. Open your fork on GitHub.
-2. Go to **Settings → Pages**.
-3. Under **Build and deployment**, select **GitHub Actions** as the source.
-4. Open the **Actions** tab.
-5. If prompted, enable GitHub Actions for the fork.
-6. Run the workflow named **Deploy MECHASSET**, or make a small documentation change and push it to the `main` branch to trigger the workflow.
-7. Wait until the workflow finishes successfully.
-8. Open the published GitHub Pages URL shown in **Settings → Pages**.
-
-The workflow publishes the frontend. It does not deploy the Cloudflare Worker; that backend was deployed separately in Part 4.
-
-## Part 6 — Connect the website to your Worker
-
-1. Open your GitHub Pages website.
-2. On the connection screen, paste the `workers.dev` URL printed by the setup script.
-3. Click **Continue to workspace**.
-4. Confirm that the dashboard loads.
-5. Open the API test page if available and test the Worker health endpoint.
-6. Confirm the database health endpoint reports that the database is connected and the schema is complete.
-
-Use the URL from your own Worker deployment, not the original repository owner's Worker URL.
-
-## Part 7 — Keep your fork updated
-
-When the original repository receives improvements:
-
-1. Open your fork on GitHub.
-2. Select **Sync fork**.
-3. Review incoming changes before accepting them.
-4. Pull the updated fork to your local computer:
-
-```powershell
-git pull
-```
-
-5. If changes affect files under `worker/`, redeploy the Worker from the repository's `worker` directory:
-
-```powershell
-cd worker
-npx wrangler deploy
-cd ..
-```
-
-Do not overwrite your own `worker/wrangler.toml` with another user's D1 ID. Keep your own database ID and Worker secrets.
-
-## What is created for each user?
-
-| Component | Belongs to |
+| Secret name | Isi |
 |---|---|
-| GitHub repository | The user who created the Fork |
-| GitHub Pages frontend | The user's GitHub account |
-| Cloudflare Worker | The user's Cloudflare account |
-| D1 database | The user's Cloudflare account |
-| Gemini API key | The user's Google account |
-| Worker URL | The user's Cloudflare deployment |
+| `CLOUDFLARE_API_TOKEN` | API Token dari langkah 3 |
+| `CLOUDFLARE_ACCOUNT_ID` | Account ID dari langkah 4 |
+| `GEMINI_API_KEY` | Gemini API Key dari langkah 5 |
+
+Nama secret harus sama persis. Nilai secret tidak akan ditulis ke repository atau ditampilkan oleh workflow.
+
+## 7. Jalankan Automatic Cloudflare Setup
+
+1. Buka tab **Actions** di Fork Anda.
+2. Jika GitHub meminta izin, klik **I understand my workflows, go ahead and enable them**.
+3. Pilih workflow **MECHASSET - Automatic Cloudflare Setup**.
+4. Klik **Run workflow**.
+5. Isi:
+   - **D1 database name:** `mechasset-db` (default).
+   - **Worker name:** gunakan nama unik untuk Worker Anda, misalnya `mechasset-username`. Nama Worker harus unik dalam akun Cloudflare Anda.
+6. Klik **Run workflow** dan tunggu hingga selesai dengan status hijau.
+
+Workflow melakukan langkah berikut secara otomatis:
+- Memeriksa apakah D1 dengan nama yang dipilih sudah ada di akun Anda.
+- Menggunakan database yang sudah ada atau membuat database baru.
+- Mengambil UUID database dari respons Cloudflare API.
+- Membuat konfigurasi Wrangler sementara dengan D1 ID milik Anda. File konfigurasi sementara dihapus setelah proses.
+- Menjalankan seluruh SQL migration yang tersedia di `worker/migrations`, termasuk skema PSV, BVV, dan PV.
+- Menyimpan `GEMINI_API_KEY` sebagai Cloudflare Worker Secret.
+- Deploy Cloudflare Worker.
+- Menampilkan URL Worker jika subdomain Cloudflare dapat dibaca.
+
+**Installer bersifat idempotent untuk database:** menjalankan ulang workflow dengan nama database yang sama akan menggunakan database yang sudah ada, bukan membuat database duplikat. Migration Wrangler hanya menerapkan migration yang belum tercatat.
+
+Jika workflow gagal, buka run yang gagal dan periksa log langkah yang berwarna merah. Jangan menyalin atau membagikan nilai secret.
+
+## 8. Aktifkan GitHub Pages
+
+1. Buka Fork → **Settings → Pages**.
+2. Pada **Build and deployment**, pilih **GitHub Actions** sebagai Source.
+3. Buka tab **Actions**.
+4. Pilih workflow **Deploy MECHASSET** dan jalankan **Run workflow** pada branch `main`, atau lakukan perubahan dokumentasi lalu push ke `main`.
+5. Tunggu sampai workflow selesai dengan status hijau.
+6. Buka URL GitHub Pages yang ditampilkan di **Settings → Pages**.
+
+Workflow Pages menerbitkan frontend. Workflow Cloudflare Setup menerbitkan backend. Keduanya adalah deployment terpisah.
+
+## 9. Hubungkan frontend dengan Worker
+
+1. Salin URL Worker dari log workflow Cloudflare Setup. Jika tidak muncul, buka Cloudflare → **Workers & Pages** → Worker Anda → salin URL `workers.dev`.
+2. Buka website GitHub Pages milik Anda.
+3. Masukkan URL Worker tersebut pada pengaturan koneksi MECHASSET.
+4. Simpan dan lanjutkan ke workspace.
+5. Uji endpoint `https://URL-WORKER-ANDA/api/health`.
+6. Uji koneksi database melalui endpoint `/api/db/health` jika tersedia pada versi aplikasi Anda.
+
+Jangan memasukkan URL Worker milik pengguna lain.
+
+## 10. Memperbarui Fork
+
+1. Buka repository Fork Anda.
+2. Klik **Sync fork** untuk melihat pembaruan dari repository sumber.
+3. Tinjau perubahan sebelum menerima pembaruan.
+4. Jika pembaruan mengubah backend atau file migration, jalankan kembali workflow **MECHASSET - Automatic Cloudflare Setup**. Workflow akan menggunakan database yang sama dan menerapkan migration yang belum berjalan.
+5. Jika hanya frontend yang berubah, workflow **Deploy MECHASSET** akan menerbitkan ulang GitHub Pages setelah perubahan masuk ke branch `main`.
+
+Jangan menyalin `worker/wrangler.toml` dari repository sumber ke konfigurasi instalasi pribadi. Installer menggunakan konfigurasi sementara dan D1 ID milik akun Anda.
 
 ## Troubleshooting
 
-### D1 database not found (Wrangler error 10181)
+### Workflow tidak muncul di tab Actions
+Pastikan GitHub Actions diaktifkan untuk Fork dan file `.github/workflows/setup-cloudflare.yml` ada di branch default repository.
 
-The database ID in `worker/wrangler.toml` does not belong to the Cloudflare account currently selected by Wrangler, or the database does not exist in that account. Check the database ID and sign in to the correct Cloudflare account using:
+### Cloudflare API 401 atau 403
+Token salah/kedaluwarsa atau permission tidak cukup. Buat token baru dengan permission D1 Edit, Workers Scripts Edit, dan Account Settings Read pada akun yang benar. Perbarui secret `CLOUDFLARE_API_TOKEN`.
 
-```powershell
-cd worker
-npx wrangler logout
-npx wrangler login
-npx wrangler whoami
-```
+### Worker name already exists
+Pilih nama Worker lain yang unik pada input **worker_name**, lalu jalankan ulang workflow.
 
-Then verify `database_id` and `database_name` in `wrangler.toml`.
+### Database sudah ada
+Ini normal. Installer akan menggunakan database dengan nama tersebut. Pastikan database itu memang database MECHASSET milik Anda. Jangan gunakan database milik aplikasi lain.
 
-### Database connected but schema incomplete
+### Migration gagal
+Buka log workflow. Pastikan D1 yang dipilih adalah database MECHASSET yang benar dan token memiliki permission D1 Edit. Jangan menghapus database untuk mencoba ulang.
 
-Apply all migrations again:
+### Gemini API key invalid atau quota habis
+Perbarui secret `GEMINI_API_KEY` di GitHub Settings → Secrets and variables → Actions, lalu jalankan ulang workflow.
 
-```powershell
-cd worker
-npx wrangler d1 migrations apply YOUR_DATABASE_NAME --remote
-```
+### Website tidak dapat terhubung ke Worker
+Pastikan Pages dan Worker sama-sama berhasil deploy, URL Worker benar, dan URL menggunakan HTTPS.
 
-### Gemini API key missing or invalid
+## Komponen yang dibuat untuk setiap pengguna
 
-Set the secret again:
+| Komponen | Pemilik |
+|---|---|
+| Fork repository | Akun GitHub pengguna |
+| GitHub Pages | Akun GitHub pengguna |
+| Cloudflare Worker | Akun Cloudflare pengguna |
+| D1 Database | Akun Cloudflare pengguna |
+| Gemini API Key | Akun Google pengguna |
+| Worker URL | Deployment Cloudflare pengguna |
 
-```powershell
-cd worker
-npx wrangler secret put GEMINI_API_KEY
-```
+## Catatan keamanan dan engineering
 
-Do not use `wrangler.toml` or frontend JavaScript to store this secret.
+- API Token Cloudflare hanya disimpan sebagai GitHub Actions Secret.
+- Gemini API Key hanya disimpan sebagai Cloudflare Worker Secret.
+- D1 ID dibuat dan digunakan di workflow; tidak perlu menyalin ID repository utama.
+- Jangan unggah dokumen client yang bersifat rahasia kecuali kebijakan perusahaan mengizinkan pemrosesan melalui layanan eksternal yang Anda pilih.
+- Hasil ekstraksi AI adalah draft. Periksa setiap nilai terhadap dokumen sumber sebelum digunakan sebagai engineering register.
+- Kuota, biaya, dan ketentuan GitHub, Cloudflare, dan Google mengikuti akun masing-masing pengguna.
 
-### Website cannot connect to the Worker
+## Alternatif: instalasi lokal Windows
 
-- Confirm the Worker deployment succeeded.
-- Confirm the URL entered in MECHASSET is your own `workers.dev` URL and uses HTTPS.
-- Visit `YOUR_WORKER_URL/api/health` in a browser.
-- Check that your GitHub Pages site has finished deploying.
-
-## Important notes
-
-- This setup creates a separate backend and database for each user. It does not copy your data into the original author's account.
-- The script is intended for Windows PowerShell and a new installation.
-- Cloudflare and Gemini account quotas, service terms, and possible charges depend on each user's account and plan.
-- AI-extracted engineering information is a draft. Verify all extracted values against the source documents before using them in an engineering register.
-- Do not upload confidential client documents unless your organization authorizes processing through the services you configure.
+Jika tidak ingin menggunakan GitHub Actions, repository tetap menyediakan `setup-mechasset.ps1` untuk instalasi lokal melalui PowerShell. Cara ini memerlukan Node.js LTS dan login Wrangler. Panduan ini adalah jalur alternatif; untuk instalasi otomatis berbasis GitHub Actions, ikuti langkah 3–9 di atas.
