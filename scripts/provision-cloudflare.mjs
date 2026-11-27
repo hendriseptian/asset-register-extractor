@@ -51,10 +51,19 @@ function runWrangler(args, input) {
   if (result.stdout) process.stdout.write(result.stdout);
   if (result.stderr) process.stderr.write(result.stderr);
   if (result.error) throw result.error;
-  if (result.status !== 0) throw new Error(`Wrangler failed: wrangler ${args.join(" ")}`);
+  if (result.status !== 0) {
+    const detail = (result.stderr || result.stdout || "").trim().split("\\n").slice(-12).join("\\n");
+    throw new Error(`Wrangler command failed (exit ${result.status}): wrangler ${args.join(" ")}\\n${detail}`);
+  }
 }
 
 console.log("MECHASSET automatic Cloudflare provisioning");
+console.log("Checking Cloudflare API token...");
+const tokenCheck = await cloudflare("/user/tokens/verify");
+if (tokenCheck.result?.status !== "active") {
+  throw new Error("Cloudflare API token is not active. Create a new API Token and update CLOUDFLARE_API_TOKEN in GitHub Actions Secrets.");
+}
+console.log("Cloudflare API token is active.");
 console.log(`Cloudflare account: ${accountId}`);
 console.log(`Worker: ${workerName}`);
 console.log(`D1 database: ${databaseName}`);
