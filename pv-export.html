@@ -62,7 +62,8 @@ function exportWorkbook(){
  }
  const h3=['No.','Tag PV','Part','Equipment Name','Owner / Operator','Location / Platform','PV type','Serial No.','Manufacture','Diameter',null,'Length',null,'Height/Wide',null,'Corrosion Allowance (mm)','Joint Efficiency','Radiography','Design Code','Material',null,'Year',null,null,'Inspection',null,null,'Thickness (mm)',null,null,'Pressure (kg/)',null,null,null,'Temperature (℃)',null,'Fluid Service'];
  const h4=[null,null,null,null,null,null,null,null,null,'Value','Unit','Value','Unit','Value','Unit',null,null,null,null,'Type','Detail','Built','Date Built','Used','Previous Inspection','last Inspection','Date','Nominal Thickness','Previous Thickness','Actual Thickness','Design','MAWP','HydroTest','Operating','Design','Operating',null];
- const matrix=[['PV',null,null,null,null,null,'INFORMATION DATA PV'],Array(37).fill(null),h3,h4];
+ h3.push('All Extracted Source Data (JSON)');h4.push('Audit / Traceability');
+ const matrix=[['PV',null,null,null,null,null,'INFORMATION DATA PV'],Array(38).fill(null),h3,h4];
  let equipmentNo=0,rowNum=5;const merges=[];
  for(const g of groups.values()){
   equipmentNo++;
@@ -82,12 +83,14 @@ function exportWorkbook(){
   const partMap=new Map();
   for(const source of [...previousRows,...lastRows,...docs]){
    const rec=source.record||{},part=String(rec.component||rec.part||rec.measurement_point||rec.identification||'').trim();
-   if(!part)continue;
-   const key=normalizeTag(part);
-   if(!partMap.has(key))partMap.set(key,{part,previous:[],last:[],documents:[]});
-   if(source.record_type==='previous_ut')partMap.get(key).previous.push(source);
-   else if(source.record_type==='last_ut')partMap.get(key).last.push(source);
-   else partMap.get(key).documents.push(source);
+   // Never discard a source record just because the client document has no Part label.
+   // Give each unlabelled source record its own traceable output row.
+   const key=part?normalizeTag(part):'__unassigned__'+String(source.record_id||source.document_id||partMap.size);
+   if(!partMap.has(key))partMap.set(key,{part,previous:[],last:[],documents:[],sources:[]});
+   const bucket=partMap.get(key);bucket.sources.push(source);
+   if(source.record_type==='previous_ut')bucket.previous.push(source);
+   else if(source.record_type==='last_ut')bucket.last.push(source);
+   else bucket.documents.push(source);
   }
   const newest=list=>list.slice().sort((a,b)=>String(b.created_at||b.document_created_at||'').localeCompare(String(a.created_at||a.document_created_at||'')))[0];
   let display;
@@ -95,12 +98,13 @@ function exportWorkbook(){
    display=[...partMap.values()].map(part=>{
     const prevRow=newest(part.previous),lastRow=newest(part.last),prevRec=prevRow?.record||{},lastRec=lastRow?.record||{};
     const partDoc=part.documents.reduce((acc,item)=>({...acc,...(item.record||{})}),{});
-    const combined={...g.doc,...partDoc,...prevRec,...lastRec,component:part.part,
+    const combined={...g.doc,...partDoc,...prevRec,...lastRec,component:part.part||'',
      previous_thickness:prevRec.thickness_reading??prevRec.previous_thickness??'',
      actual_thickness:lastRec.thickness_reading??lastRec.actual_thickness??'',
      previous_inspection:exportYear(prevRec.inspection_date||prevRec.report_date),
      last_inspection:exportYear(lastRec.inspection_date||lastRec.report_date),
-     inspection_date:normalizeExportDate(lastRec.inspection_date||lastRec.report_date)};
+     inspection_date:normalizeExportDate(lastRec.inspection_date||lastRec.report_date),
+     _all_source_records:part.sources.map(source=>({record_id:source.record_id||null,document_id:source.document_id||null,file_name:source.file_name||'',document_type:source.document_type||'',record_type:source.record_type||'',review_status:source.review_status||'',created_at:source.created_at||source.document_created_at||'',record:source.record||{}}))};
     return {record_type:'combined_ut',record:combined};
    });
   }else display=[{record_type:'document',record:g.doc}];
@@ -109,7 +113,7 @@ function exportWorkbook(){
    const row=display[index],r={...g.doc};for(const [field,value] of Object.entries(row.record||{}))if(value!==null&&value!==undefined&&String(value).trim()!=='')r[field]=value;
    const v=(k,fallback='')=>r[k]!==null&&r[k]!==undefined&&String(r[k]).trim()!==''?r[k]:fallback;
    const jointRadiography=normalizeJointRadiography(r);
-   matrix.push([index===0?equipmentNo:'',index===0?(g.tag||v('equipment_tag')):'',v('component'),v('equipment_name',g.e.equipment_name),v('owner_operator',g.e.owner_operator),v('location',g.e.location),v('equipment_type'),canonicalSerial,v('manufacturer'),v('diameter_value',v('diameter')),v('diameter_unit'),v('length_or_height',v('length')),v('length_unit'),v('height_wide',v('height_width')),v('height_wide_unit',v('height_unit')),v('corrosion_allowance'),jointRadiography.joint_efficiency,jointRadiography.radiography,v('design_code'),v('material_type',v('material')),v('material_detail',v('material_shell',v('material_head'))),v('year_built'),v('date_built'),v('year_used'),v('previous_inspection'),v('last_inspection'),v('inspection_date'),v('nominal_thickness'),v('previous_thickness'),v('actual_thickness',v('thickness_reading')),v('design_pressure'),v('mawp'),v('hydrotest_pressure'),v('operating_pressure'),v('design_temperature'),v('operating_temperature'),v('fluid_service')]);
+   matrix.push([index===0?equipmentNo:'',index===0?(g.tag||v('equipment_tag')):'',v('component'),v('equipment_name',g.e.equipment_name),v('owner_operator',g.e.owner_operator),v('location',g.e.location),v('equipment_type'),canonicalSerial,v('manufacturer'),v('diameter_value',v('diameter')),v('diameter_unit'),v('length_or_height',v('length')),v('length_unit'),v('height_wide',v('height_width')),v('height_wide_unit',v('height_unit')),v('corrosion_allowance'),jointRadiography.joint_efficiency,jointRadiography.radiography,v('design_code'),v('material_type',v('material')),v('material_detail',v('material_shell',v('material_head'))),v('year_built'),v('date_built'),v('year_used'),v('previous_inspection'),v('last_inspection'),v('inspection_date'),v('nominal_thickness'),v('previous_thickness'),v('actual_thickness',v('thickness_reading')),v('design_pressure'),v('mawp'),v('hydrotest_pressure'),v('operating_pressure'),v('design_temperature'),v('operating_temperature'),v('fluid_service'),JSON.stringify(r._all_source_records||[])]);
    rowNum++;
   }
   if(display.length>1)for(const col of [0,1])merges.push({s:{r:first-1,c:col},e:{r:rowNum-2,c:col}});
@@ -119,7 +123,7 @@ function exportWorkbook(){
  pv['!cols']=[7.43,16.71,19,16.86,19,24.29,13,17,32.14,14,9.86,14,9,14,9,18,27.57,14.29,15.29,11,13,11,11.71,11.71,11.71,13.14,13.71,13.86,14,14,14,14,14,14,18].map(wch=>({wch}));
  pv['!rows']=[{hpt:22},{hpt:8},{hpt:30},{hpt:24}];
  const thin={style:'thin',color:{rgb:'D0D0D0'}},cellBorder={top:thin,bottom:thin,left:thin,right:thin};
- for(let rr=0;rr<matrix.length;rr++)for(let cc=0;cc<37;cc++){
+ for(let rr=0;rr<matrix.length;rr++)for(let cc=0;cc<38;cc++){
   const addr=XLSX.utils.encode_cell({r:rr,c:cc});
   if(!pv[addr])continue;
   const isHeader=rr===2||rr===3,isTitle=rr===0;
@@ -130,10 +134,10 @@ function exportWorkbook(){
   };
  }
  // Match the supplied Database PV template: one worksheet, grouped headers and one row per Part.
- // The populated template area is A:AK (37 columns).
+ // The template fields are A:AK (37 columns), with AL reserved for source-record audit JSON.
  const titleFill={patternType:'solid',fgColor:{rgb:'D9E1F2'}};
  const headerFill={patternType:'solid',fgColor:{rgb:'E7E6E6'}};
- for(let rr=0;rr<matrix.length;rr++)for(let cc=0;cc<35;cc++){
+ for(let rr=0;rr<matrix.length;rr++)for(let cc=0;cc<38;cc++){
   const addr=XLSX.utils.encode_cell({r:rr,c:cc});
   if(!pv[addr])continue;
   const isTop=rr===0,isHeader=rr===2||rr===3;
@@ -148,7 +152,7 @@ function exportWorkbook(){
  pv['!freeze']={xSplit:2,ySplit:4};XLSX.utils.book_append_sheet(wb,pv,'Database PV');
  const now=new Date(),stamp=now.getFullYear()+String(now.getMonth()+1).padStart(2,'0')+String(now.getDate()).padStart(2,'0');
  XLSX.writeFile(wb,'MECHASSET_PV_Database_'+stamp+'.xlsx');
- $('status').textContent='Excel generated in Database PV template order (A:AK). All edits made in Mapping & Review are included.';
+ $('status').textContent='Excel generated in Database PV template order (A:AL). All edits made in Mapping & Review are included, and every source record is retained in the AL audit column.';
 }
 $('load').addEventListener('click',loadData);$('reload').addEventListener('click',loadData);$('equipment').addEventListener('change',loadData);$('export').addEventListener('click',exportWorkbook);
 })();
