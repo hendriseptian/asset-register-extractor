@@ -75,6 +75,8 @@ Nama secret harus sama persis. Nilai secret tidak akan ditulis ke repository ata
 
 ## 7. Jalankan Automatic Cloudflare Setup
 
+> **Penting — jangan gunakan Cloudflare Workers Builds untuk deployment awal.** Jangan hubungkan Fork ke Cloudflare Workers Builds dan jangan menjalankan `npx wrangler deploy` dari build pipeline Cloudflare. File `worker/wrangler.toml` pada repository sumber bukan konfigurasi D1 untuk akun Fork. Workflow GitHub Actions di bawah membuat konfigurasi sementara yang memakai D1 milik pengguna sendiri.
+
 1. Buka tab **Actions** di Fork Anda.
 2. Jika GitHub meminta izin, klik **I understand my workflows, go ahead and enable them**.
 3. Pilih workflow **MECHASSET - Automatic Cloudflare Setup**.
@@ -107,7 +109,7 @@ Jika workflow gagal, buka run yang gagal dan periksa log langkah yang berwarna m
 5. Tunggu sampai workflow selesai dengan status hijau.
 6. Buka URL GitHub Pages yang ditampilkan di **Settings → Pages**.
 
-Workflow Pages menerbitkan frontend. Workflow Cloudflare Setup menerbitkan backend. Keduanya adalah deployment terpisah.
+Workflow Pages menerbitkan frontend. Workflow Cloudflare Setup menerbitkan backend. Keduanya adalah deployment terpisah. Pengguna Fork tetap harus membuat tiga secrets miliknya sendiri; GitHub tidak menyalin secrets pemilik repository sumber ke Fork, dan hal ini memang diperlukan agar kredensial setiap pengguna tetap terpisah.
 
 ## 9. Hubungkan frontend dengan Worker
 
