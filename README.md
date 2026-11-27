@@ -93,3 +93,10 @@ Supported document MIME types: PDF, PNG, JPEG, WEBP. Document uploads are limite
 - No unit conversion or calculation is performed automatically unless the value is explicitly present in the source.
 - Do not upload confidential client documents unless your organization authorizes processing by the configured external AI service.
 - Current data storage is browser-session based; records are not synchronized to a database and may be lost when the session is cleared.
+
+
+## Fork and install your own MECHASSET workspace
+
+Want to use MECHASSET with your own GitHub and Cloudflare accounts? Start with **[FORK-SETUP.md](FORK-SETUP.md)**. It is written for beginners and explains how to Fork the repository, create a separate Gemini API key, create your own Cloudflare D1 database, apply all database migrations, deploy your Worker, and publish the GitHub Pages frontend.
+
+For Windows users, run `setup-mechasset.ps1` from the repository root to automate the Cloudflare backend setup. Each installation uses its own D1 database, Worker, Gemini API key, and Worker URL. Do not use another user's D1 database ID or API key.
