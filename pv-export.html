@@ -32,7 +32,19 @@ function normalizeExportDate(value){
  if(m)return String(m[1]).padStart(2,'0')+'/'+String(m[2]).padStart(2,'0')+'/'+m[3];
  m=s.match(/^(\d{4})-(\d{2})-(\d{2})/);if(m)return m[3]+'/'+m[2]+'/'+m[1];return s;
 }
-function exportYear(value){const s=normalizeExportDate(value);const m=s.match(/(?:^|\/)(\d{4})$/);return m?m[1]:''}
+function exportYear(value){
+ if(value===null||value===undefined||String(value).trim()==='')return '';
+ const s=String(value).trim();
+ // Accept common report formats: 12-Nov-2026, 12 Nov 2026, 12/11/2026,
+ // 2026-11-12, and a year printed on its own.
+ let m=s.match(/^(\d{4})$/);if(m)return m[1];
+ m=s.match(/^(?:\d{1,2})[-\s]([A-Za-z]{3,})[-\s](\d{4})$/);
+ if(m){const month=m[1].slice(0,3).toLowerCase();if(['jan','feb','mar','apr','may','jun','jul','aug','sep','oct','nov','dec'].includes(month))return m[2];}
+ m=s.match(/^(\d{1,2})[\/.-](\d{1,2})[\/.-](\d{4})$/);if(m)return m[3];
+ m=s.match(/^(\d{4})-(\d{2})-(\d{2})(?:[T\s].*)?$/);if(m)return m[1];
+ // Last-resort: accept an unambiguous four-digit year within a longer date label.
+ m=s.match(/\b(19\d{2}|20\d{2})\b/);return m?m[1]:'';
+}
 function normalizeExportIdentity(record){
  const r={...record},raw=String(r.year_built??'').trim();
  if(raw.includes('/')){const p=raw.split('/').map(x=>x.trim());if(!r.year_used&&/^\d{4}$/.test(p[1]||''))r.year_used=p[1];if(/^\d{4}$/.test(p[0]||''))r.year_built=p[0]}
